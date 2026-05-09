@@ -210,24 +210,33 @@ public class CloudAPI {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private static void sendEmail(String recipient, String subject, String content) throws MessagingException {
-        Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", "smtp.gmail.com");
-        props.put("mail.smtp.port", "587");
-        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
-        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
-        Session session = Session.getInstance(props, new Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(SENDER_EMAIL, APP_PASSWORD);
-            }
-        });
-        Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE PRO"));
-        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
-        message.setSubject(subject);
-        message.setContent("<h1 style='color:#D4AF37;'>FXAUSD ELITE</h1><p>Auth Code: <b>" + content.replaceAll("\\D+", "") + "</b></p>", "text/html");
-        Transport.send(message);
+    private static void sendEmail(String recipient, String subject, String content) {
+        try {
+            Properties props = new Properties();
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.host", "smtp.gmail.com");
+            props.put("mail.smtp.port", "587");
+            props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+            props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+            
+            Session session = Session.getInstance(props, new Authenticator() {
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(SENDER_EMAIL, APP_PASSWORD);
+                }
+            });
+
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE PRO"));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
+            message.setSubject(subject);
+            message.setContent("<h1 style='color:#D4AF37;'>FXAUSD ELITE</h1><p>Auth Code: <b>" + content.replaceAll("\\D+", "") + "</b></p>", "text/html");
+            
+            Transport.send(message);
+            System.out.println("✅ Email sent successfully to " + recipient);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send email: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
