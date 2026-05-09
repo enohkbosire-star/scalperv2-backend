@@ -24,10 +24,15 @@ public class ForexBot {
     private static final Gson GSON = new Gson();
 
     private static int initializePort() {
-        String portEnv = System.getenv("FOREXBOT_PORT");
-        if (portEnv != null && !portEnv.isEmpty()) {
+        // Check for Render's PORT first, then FOREXBOT_PORT, then fallback to 8888
+        String port = System.getenv("PORT");
+        if (port == null || port.isEmpty()) {
+            port = System.getenv("FOREXBOT_PORT");
+        }
+        
+        if (port != null && !port.isEmpty()) {
             try {
-                return Integer.parseInt(portEnv);
+                return Integer.parseInt(port);
             } catch (NumberFormatException ignored) {
             }
         }

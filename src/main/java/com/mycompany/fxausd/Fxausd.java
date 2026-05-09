@@ -848,6 +848,16 @@ public class Fxausd {
 
     public static void main(String[] args) throws Exception {
 
+        // Start the Cloud Spark API and Dashboard
+        new Thread(() -> {
+            try {
+                System.out.println("🚀 Initializing Cloud API...");
+                CloudAPI.start();
+            } catch (Exception e) {
+                System.err.println("❌ Cloud API Error: " + e.getMessage());
+            }
+        }).start();
+
         boolean liveMode = containsArg(args, "live");
         boolean serverMode = containsArg(args, "server");
         boolean chartMode = containsArg(args, "chart");
@@ -2556,43 +2566,21 @@ public class Fxausd {
                     System.getenv("EMAIL_TO")
             );
             ForexBot.BotState botState = new ForexBot.BotState(notifier);
-            String portEnv = System.getenv(FOREXBOT_SERVER_PORT_ENV);
-            if (portEnv != null && !portEnv.trim().isEmpty()) {
-                try {
-                    int port = Integer.parseInt(portEnv.trim());
-                    if (!isPortAvailable(port)) {
-                        System.out.println("❌ Requested ForexBot server port " + port + " is unavailable. Server startup aborted.");
-                        return;
-                    }
+            
+            // Check for PORT provided by Render
+            String portStr = System.getenv("PORT");
+            int port = (portStr != null && !portStr.isEmpty()) ? Integer.parseInt(portStr) : 8888;
 
-                    try {
-                        java.lang.reflect.Method startMethod = ForexBot.class.getMethod("startAPIServer", ForexBot.BotState.class, int.class);
-                        startMethod.invoke(null, botState, port);
-                        System.out.println("▶ ForexBot server started on configured port " + port + ".");
-                    } catch (NoSuchMethodException nsme) {
-                        System.out.println("⚠️ ForexBot server port override ignored; startAPIServer(botState, int) is not supported by current ForexBot implementation.");
-                        System.out.println("⚠️ Skipping ForexBot server startup because explicit port override cannot be applied.");
-                        return;
-                    }
-                } catch (NumberFormatException nfe) {
-                    System.out.println("⚠️ Invalid " + FOREXBOT_SERVER_PORT_ENV + " value: " + portEnv + ". Server startup aborted.");
-                    return;
-                }
-            } else {
-                if (!isAnyPortAvailable(8888, 8898)) {
-                    System.out.println("⚠️ All default ForexBot ports 8888-8898 are in use. Skipping ForexBot server startup.");
-                    return;
-                }
-                ForexBot.startAPIServer(botState);
-            }
+            System.out.println("🚀 Starting ForexBot Cloud API on port " + port);
+            ForexBot.startAPIServer(botState, port);
+            
             botState.startSignalProcessor();
-            System.out.println("💡 ForexBot live API server is running. Press Ctrl+C to stop.");
+            System.out.println("💡 ForexBot live API server is running.");
             while (true) {
                 Thread.sleep(1000);
             }
         } catch (Exception e) {
             System.out.println("❌ Failed to start ForexBot server: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
