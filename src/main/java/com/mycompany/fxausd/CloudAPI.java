@@ -416,6 +416,24 @@ public class CloudAPI {
             st.execute("CREATE TABLE IF NOT EXISTS journals (id SERIAL PRIMARY KEY, email VARCHAR(100), content TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS statuses (id SERIAL PRIMARY KEY, email VARCHAR(100), name VARCHAR(100), content TEXT, likes INT DEFAULT 0, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS status_likes (status_id INT, email VARCHAR(100), PRIMARY KEY(status_id, email))");
+            // Seed Admin Account
+            String adminEmail = "enohkbosire@gmail.com";
+            PreparedStatement checkAdmin = conn.prepareStatement("SELECT id FROM users WHERE email=?");
+            checkAdmin.setString(1, adminEmail);
+            if (!checkAdmin.executeQuery().next()) {
+                PreparedStatement insertAdmin = conn.prepareStatement(
+                    "INSERT INTO users(email, name, password, balance, is_admin, is_approved, community_status) " +
+                    "VALUES (?, 'Admin Enohk', 'Enohk123@', 1000000, TRUE, TRUE, 'approved')");
+                insertAdmin.setString(1, adminEmail);
+                insertAdmin.executeUpdate();
+                System.out.println("⭐ Admin account seeded: " + adminEmail);
+            } else {
+                // Ensure existing admin has the correct password and admin rights
+                PreparedStatement updateAdmin = conn.prepareStatement(
+                    "UPDATE users SET password='Enohk123@', is_admin=TRUE, is_approved=TRUE WHERE email=?");
+                updateAdmin.setString(1, adminEmail);
+                updateAdmin.executeUpdate();
+            }
             System.out.println("✅ Database synced with Neon.tech");
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -426,6 +444,10 @@ public class CloudAPI {
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.smtp.port", "587");
+        // Critical for Cloud SSL/TLS security
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+
         Session session = Session.getInstance(props, new Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(SENDER_EMAIL, APP_PASSWORD);
@@ -438,6 +460,10 @@ public class CloudAPI {
             message.setSubject(subject);
             message.setText(content);
             Transport.send(message);
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("✅ Email delivered successfully to: " + recipient);
+        } catch (Exception e) {
+            System.err.println("❌ Critical Email Error: " + e.getMessage());
+            e.printStackTrace(); 
+        }
     }
 }
