@@ -51,7 +51,7 @@ public class CloudAPI {
         System.out.println("🔥 FXAUSD CLOUD API LIVE ON PORT " + portNumber);
 
         // =========================
-        // FULL ENDPOINTS FROM MAIN
+        // SYSTEM STATUS & PREFLIGHT
         // =========================
         get("/", (req, res) -> {
             Map<String, Object> status = new HashMap<>();
@@ -63,6 +63,9 @@ public class CloudAPI {
             return gson.toJson(status);
         });
 
+        // =========================
+        // WELCOME QUOTES
+        // =========================
         get("/welcome-quotes", (req, res) -> {
             List<String> quotes = List.of(
                 "Welcome to FXAUSD - Your Gateway to Financial Mastery.",
@@ -74,24 +77,38 @@ public class CloudAPI {
             return gson.toJson(quotes);
         });
 
+        // =========================
+        // REQUEST OTP
+        // =========================
         post("/request-otp", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email");
+
             String otp = String.format("%06d", new Random().nextInt(999999));
             otpStorage.put(email, otp);
+
             System.out.println("📧 OTP for " + email + ": " + otp);
             sendEmail(email, "Your FXAUSD Verification Code", "Your verification code is: " + otp);
+
             return gson.toJson(Map.of("status", "success"));
         });
 
+        // =========================
+        // VERIFY OTP (SIGNUP / LOGIN)
+        // =========================
         post("/verify-otp", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email") != null ? data.get("email").toLowerCase().trim() : null;
             String otp = data.get("otp");
             String type = data.get("type");
 
-            if (email == null || otp == null) return gson.toJson(Map.of("status", "fail", "message", "Missing info"));
-            if (!otpStorage.containsKey(email) || !otpStorage.get(email).equals(otp)) return gson.toJson(Map.of("status", "fail", "message", "Invalid OTP"));
+            if (email == null || otp == null) {
+                return gson.toJson(Map.of("status", "fail", "message", "Missing email or OTP"));
+            }
+
+            if (!otpStorage.containsKey(email) || !otpStorage.get(email).equals(otp)) {
+                return gson.toJson(Map.of("status", "fail", "message", "Invalid OTP"));
+            }
 
             otpStorage.remove(email);
             String password = data.get("password") != null ? data.get("password").trim() : "";
@@ -102,16 +119,30 @@ public class CloudAPI {
                 if ("signup".equals(type)) {
                     PreparedStatement check = conn.prepareStatement("SELECT id FROM users WHERE email=?");
                     check.setString(1, email);
-                    if (check.executeQuery().next()) return gson.toJson(Map.of("status", "fail", "message", "User exists"));
-                    PreparedStatement insert = conn.prepareStatement("INSERT INTO users(email, name, phone, password, balance, is_approved) VALUES (?, ?, ?, ?, 50, TRUE)");
-                    insert.setString(1, email); insert.setString(2, name); insert.setString(3, phone); insert.setString(4, password);
+                    if (check.executeQuery().next()) {
+                        return gson.toJson(Map.of("status", "fail", "message", "User exists"));
+                    }
+                    PreparedStatement insert = conn.prepareStatement(
+                            "INSERT INTO users(email, name, phone, password, balance, is_approved) VALUES (?, ?, ?, ?, 50, TRUE)");
+                    insert.setString(1, email);
+                    insert.setString(2, name);
+                    insert.setString(3, phone);
+                    insert.setString(4, password);
                     insert.executeUpdate();
+                    System.out.println("🆕 New User Registered: " + email);
                 }
                 return gson.toJson(Map.of("status", "success"));
-            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return gson.toJson(Map.of("status", "error"));
+            }
         });
 
+        // =========================
+        // USER PROFILE
+        // =========================
         get("/user", (req, res) -> {
+            res.type("application/json");
             String email = req.queryParams("email");
             try (Connection conn = connect()) {
                 PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE email=?");
@@ -120,19 +151,31 @@ public class CloudAPI {
                 if (rs.next()) {
                     Map<String, Object> userMap = new HashMap<>();
                     userMap.put("email", rs.getString("email"));
-                    userMap.put("name", rs.getString("name"));
-                    userMap.put("phone", rs.getString("phone"));
+                    userMap.put("name", rs.getString("name") == null ? "" : rs.getString("name"));
+                    userMap.put("phone", rs.getString("phone") == null ? "" : rs.getString("phone"));
                     userMap.put("balance", rs.getDouble("balance"));
                     userMap.put("bot_balance", rs.getDouble("bot_balance"));
                     userMap.put("is_admin", rs.getBoolean("is_admin"));
-                    userMap.put("profile_pic_url", rs.getString("profile_pic_url"));
+                    userMap.put("is_approved", rs.getBoolean("is_approved"));
+                    userMap.put("community_status", rs.getString("community_status"));
+                    userMap.put("profile_pic_url", rs.getString("profile_pic_url") == null ? "" : rs.getString("profile_pic_url"));
                     return gson.toJson(userMap);
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return "{}";
         });
 
-        post("/wallet/mpesa-deposit", (req, res) -> gson.toJson(Map.of("status", "success", "message", "STK Push sent")));
+        // =========================
+        // M-PESA PAYMENTS
+        // =========================
+        post("/wallet/mpesa-deposit", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            String phone = (String) data.get("phone");
+            System.out.println("💰 M-Pesa Deposit Request for " + phone);
+            return gson.toJson(Map.of("status", "success", "message", "STK Push sent to " + phone));
+        });
 
         post("/wallet/mpesa-withdraw", (req, res) -> {
             Map<String, Object> data = gson.fromJson(req.body(), Map.class);
@@ -144,44 +187,83 @@ public class CloudAPI {
                 ResultSet rs = ps.executeQuery();
                 if (rs.next() && rs.getDouble("balance") >= amount) {
                     PreparedStatement update = conn.prepareStatement("UPDATE users SET balance = balance - ? WHERE email=?");
-                    update.setDouble(1, amount); update.setString(2, email);
+                    update.setDouble(1, amount);
+                    update.setString(2, email);
                     update.executeUpdate();
-                    return gson.toJson(Map.of("status", "success"));
+                    return gson.toJson(Map.of("status", "success", "message", "Withdrawal initiated"));
+                } else {
+                    return gson.toJson(Map.of("status", "fail", "message", "Insufficient balance"));
                 }
-            } catch (Exception e) {}
-            return gson.toJson(Map.of("status", "fail"));
+            } catch (Exception e) {
+                return gson.toJson(Map.of("status", "error"));
+            }
         });
 
+        // =========================
+        // AI ASSISTANT
+        // =========================
         post("/ai/chat", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String userMsg = data.get("message").toLowerCase();
-            String response = "Query acknowledged. I am FXAUSD AI-1 Neural Assistant. Analyzing: " + userMsg;
-            if (userMsg.contains("gold")) response = "⚡ XAUUSD exhibiting Price Delivery phase. Bias: Bullish.";
+            String response = "I am the FXAUSD AI-1 Neural Assistant. Query acknowledged: " + userMsg;
+            if (userMsg.contains("gold") || userMsg.contains("xauusd")) {
+                response = "⚡ [Neural Structural Audit] XAUUSD exhibits institutional liquidity above 2058. Market Bias: Bullish.";
+            } else if (userMsg.contains("risk")) {
+                response = "🛡️ [Elite Risk Protocol] Adhere to the 1.5% fixed fractional model. Equity * RiskRatio / (SL * PipValue).";
+            }
             return gson.toJson(Map.of("response", response));
         });
 
+        // =========================
+        // NOTIFICATIONS
+        // =========================
         get("/notifications", (req, res) -> {
-            List<Map<String, Object>> list = new ArrayList<>();
+            res.type("application/json");
+            List<Map<String, Object>> notifications = new ArrayList<>();
             try (Connection conn = connect()) {
                 ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM notifications ORDER BY id DESC LIMIT 50");
-                while (rs.next()) list.add(Map.of("title", rs.getString("title"), "message", rs.getString("message")));
-            } catch (Exception e) {}
-            return gson.toJson(list);
+                while (rs.next()) {
+                    notifications.add(Map.of(
+                            "id", rs.getInt("id"),
+                            "title", rs.getString("title"),
+                            "message", rs.getString("message"),
+                            "timestamp", rs.getTimestamp("timestamp").toString()
+                    ));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+            return gson.toJson(notifications);
         });
 
+        // =========================
+        // SIGNALS
+        // =========================
         get("/signals", (req, res) -> {
-            List<Map<String, Object>> list = new ArrayList<>();
+            res.type("application/json");
+            List<Map<String, Object>> signals = new ArrayList<>();
             try (Connection conn = connect()) {
                 ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC");
-                while (rs.next()) list.add(Map.of("pair", rs.getString("pair"), "action", rs.getString("action"), "entry", rs.getDouble("entry_price")));
-            } catch (Exception e) {}
-            return gson.toJson(list);
+                while (rs.next()) {
+                    signals.add(Map.of(
+                            "id", rs.getInt("id"),
+                            "pair", rs.getString("pair"),
+                            "action", rs.getString("action"),
+                            "entry", rs.getDouble("entry_price"),
+                            "tp", rs.getDouble("tp"),
+                            "sl", rs.getDouble("sl"),
+                            "confidence", rs.getDouble("confidence"),
+                            "strength", rs.getDouble("strength")
+                    ));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+            return gson.toJson(signals);
         });
 
         post("/signals/add", (req, res) -> {
+            if (!isBotActive) return gson.toJson(Map.of("status", "error", "message", "Bot Engine is stopped"));
             Map<String, Object> data = gson.fromJson(req.body(), Map.class);
             try (Connection conn = connect()) {
-                PreparedStatement ps = conn.prepareStatement("INSERT INTO signals(pair, action, entry_price, tp, sl, confidence, strength) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO signals(pair, action, entry_price, tp, sl, confidence, strength) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 ps.setString(1, (String) data.get("pair"));
                 ps.setString(2, (String) data.get("action"));
                 ps.setDouble(3, Double.parseDouble(data.get("entry").toString()));
@@ -190,78 +272,103 @@ public class CloudAPI {
                 ps.setDouble(6, data.containsKey("confidence") ? Double.parseDouble(data.get("confidence").toString()) : 0.0);
                 ps.setDouble(7, data.containsKey("strength") ? Double.parseDouble(data.get("strength").toString()) : 0.0);
                 ps.executeUpdate();
+                
+                PreparedStatement notifPs = conn.prepareStatement("INSERT INTO notifications(title, message) VALUES (?, ?)");
+                notifPs.setString(1, "New Signal: " + data.get("pair"));
+                notifPs.setString(2, data.get("action") + " setup found for " + data.get("pair"));
+                notifPs.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error", "message", e.getMessage())); }
+        });
+
+        // =========================
+        // LOGIN
+        // =========================
+        post("/login", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            String email = data.get("email") != null ? data.get("email").trim() : "";
+            String password = data.get("password") != null ? data.get("password").trim() : "";
+
+            System.out.println("🔐 Login Attempt: " + email);
+
+            try (Connection conn = connect()) {
+                PreparedStatement checkUser = conn.prepareStatement("SELECT * FROM users WHERE email=?");
+                checkUser.setString(1, email);
+                ResultSet rs = checkUser.executeQuery();
+
+                if (rs.next()) {
+                    if (rs.getString("password").equals(password)) {
+                        Map<String, Object> resp = new HashMap<>();
+                        resp.put("status", "success");
+                        resp.put("email", email);
+                        resp.put("name", rs.getString("name"));
+                        resp.put("user_id", "FX-" + rs.getInt("id"));
+                        resp.put("is_admin", rs.getBoolean("is_admin"));
+                        resp.put("is_approved", rs.getBoolean("is_approved"));
+                        System.out.println("✅ Login Success: " + email);
+                        return gson.toJson(resp);
+                    } else {
+                        return gson.toJson(Map.of("status", "fail", "message", "Incorrect password"));
+                    }
+                } else {
+                    return gson.toJson(Map.of("status", "fail", "message", "Account not found"));
+                }
+            } catch (Exception e) { 
+                e.printStackTrace();
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage()));
+            }
+        });
+
+        // =========================
+        // COMMUNITY & CHAT
+        // =========================
+        get("/statuses", (req, res) -> {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (Connection conn = connect()) {
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM statuses ORDER BY id DESC LIMIT 50");
+                while (rs.next()) list.add(Map.of("id", rs.getInt("id"), "name", rs.getString("name"), "content", rs.getString("content"), "likes", rs.getInt("likes")));
+            } catch (Exception e) {}
+            return gson.toJson(list);
+        });
+
+        post("/statuses/post", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO statuses(email, name, content) VALUES (?, ?, ?)");
+                ps.setString(1, data.get("email")); ps.setString(2, data.get("name")); ps.setString(3, data.get("content"));
+                ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
 
-        get("/news", (req, res) -> {
-            List<Map<String, Object>> list = new ArrayList<>();
-            try (Connection conn = connect()) {
-                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM news ORDER BY id DESC");
-                while (rs.next()) list.add(Map.of("title", rs.getString("title"), "impact", rs.getString("impact")));
-            } catch (Exception e) {}
-            return gson.toJson(list);
-        });
-
-        post("/upload", (req, res) -> {
-            req.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/tmp"));
-            try {
-                javax.servlet.http.Part filePart = req.raw().getPart("file");
-                String fileName = System.currentTimeMillis() + "_" + filePart.getSubmittedFileName();
-                Files.copy(filePart.getInputStream(), Path.of("uploads").resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
-                return gson.toJson(Map.of("status", "success", "url", "https://" + req.host() + "/" + fileName));
-            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
-        });
-
-        post("/login", (req, res) -> {
-            Map<String, String> data = gson.fromJson(req.body(), Map.class);
-            String email = data.get("email"); String password = data.get("password");
-            try (Connection conn = connect()) {
-                PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE email=? AND password=?");
-                ps.setString(1, email); ps.setString(2, password);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) return gson.toJson(Map.of("status", "success", "email", email, "is_admin", rs.getBoolean("is_admin")));
-            } catch (Exception e) {}
-            return gson.toJson(Map.of("status", "fail"));
-        });
-
-        get("/statuses", (req, res) -> {
-            List<Map<String, Object>> list = new ArrayList<>();
-            try (Connection conn = connect()) {
-                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM statuses ORDER BY id DESC");
-                while (rs.next()) list.add(Map.of("name", rs.getString("name"), "content", rs.getString("content")));
-            } catch (Exception e) {}
-            return gson.toJson(list);
-        });
-
         get("/messages", (req, res) -> {
-            List<Map<String, String>> list = new ArrayList<>();
+            List<Map<String, String>> messages = new ArrayList<>();
             try (Connection conn = connect()) {
                 ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM chat_messages ORDER BY id DESC LIMIT 50");
-                while (rs.next()) list.add(0, Map.of("user", rs.getString("username"), "text", rs.getString("message_text")));
+                while (rs.next()) messages.add(0, Map.of("user", rs.getString("username"), "text", rs.getString("message_text"), "type", rs.getString("message_type")));
             } catch (Exception e) {}
-            return gson.toJson(list);
+            return gson.toJson(messages);
         });
 
         post("/send-message", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             try (Connection conn = connect()) {
-                PreparedStatement ps = conn.prepareStatement("INSERT INTO chat_messages(username, message_text) VALUES (?, ?)");
-                ps.setString(1, data.get("user")); ps.setString(2, data.get("text"));
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO chat_messages(username, message_text, message_type) VALUES (?, ?, ?)");
+                ps.setString(1, data.get("user")); ps.setString(2, data.get("text")); ps.setString(3, data.getOrDefault("type", "text"));
                 ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
 
         get("/user/journal", (req, res) -> {
-            List<Map<String, String>> list = new ArrayList<>();
+            List<Map<String, String>> entries = new ArrayList<>();
             try (Connection conn = connect()) {
                 PreparedStatement ps = conn.prepareStatement("SELECT * FROM journals WHERE email=? ORDER BY id DESC");
                 ps.setString(1, req.queryParams("email"));
                 ResultSet rs = ps.executeQuery();
-                while (rs.next()) list.add(Map.of("content", rs.getString("content")));
+                while (rs.next()) entries.add(Map.of("content", rs.getString("content"), "timestamp", rs.getTimestamp("timestamp").toString()));
             } catch (Exception e) {}
-            return gson.toJson(list);
+            return gson.toJson(entries);
         });
 
         post("/user/journal", (req, res) -> {
@@ -274,13 +381,15 @@ public class CloudAPI {
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
 
-        get("/admin/status", (req, res) -> gson.toJson(Map.of("dashboard_active", isDashboardActive, "bot_active", isBotActive)));
-
-        post("/subscription/upgrade", (req, res) -> {
-            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+        post("/user/update-balance", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            String email = (String) data.get("email");
+            double balance = Double.parseDouble(data.get("balance").toString());
+            String column = (data.containsKey("type") && "bot".equals(data.get("type"))) ? "bot_balance" : "balance";
             try (Connection conn = connect()) {
-                PreparedStatement ps = conn.prepareStatement("UPDATE users SET community_status='premium' WHERE email=?");
-                ps.setString(1, data.get("email")); ps.executeUpdate();
+                PreparedStatement ps = conn.prepareStatement("UPDATE users SET " + column + "=? WHERE email=?");
+                ps.setDouble(1, balance); ps.setString(2, email);
+                ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
@@ -299,7 +408,6 @@ public class CloudAPI {
         try (Connection conn = connect()) {
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(100) UNIQUE, name VARCHAR(100), phone VARCHAR(20), password VARCHAR(100), balance DOUBLE PRECISION DEFAULT 50, bot_balance DOUBLE PRECISION DEFAULT 0, is_admin BOOLEAN DEFAULT FALSE, is_approved BOOLEAN DEFAULT TRUE, community_status VARCHAR(20) DEFAULT 'none', profile_pic_url TEXT)");
-            st.execute("CREATE TABLE IF NOT EXISTS api_logs (id SERIAL PRIMARY KEY, endpoint VARCHAR(100), method VARCHAR(10), timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ip_address VARCHAR(45))");
             st.execute("CREATE TABLE IF NOT EXISTS signals (id SERIAL PRIMARY KEY, pair VARCHAR(20), action VARCHAR(10), entry_price DOUBLE PRECISION, tp DOUBLE PRECISION, sl DOUBLE PRECISION, confidence DOUBLE PRECISION, strength DOUBLE PRECISION)");
             st.execute("CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, title TEXT, time VARCHAR(100), impact VARCHAR(20) DEFAULT 'Low', currency VARCHAR(10) DEFAULT 'USD', is_future BOOLEAN DEFAULT FALSE)");
             st.execute("CREATE TABLE IF NOT EXISTS feedbacks (id SERIAL PRIMARY KEY, email VARCHAR(100), feedback TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
@@ -325,7 +433,7 @@ public class CloudAPI {
         });
         try {
             Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(SENDER_EMAIL));
+            message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD Support"));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
             message.setSubject(subject);
             message.setText(content);
