@@ -7,7 +7,8 @@ import java.nio.charset.StandardCharsets;
 
 public class MobileSignalBridge {
 
-    private static final String API_URL = "http://192.168.100.38:4567/signals/add";
+    // Updated to use the cloud Render URL
+    private static final String API_URL = "https://fxausd.onrender.com/signals/add";
 
     public static void sendToMobile(String pair, String action, double entry, double tp, double sl, double confidence, double strength) {
         new Thread(() -> {
@@ -31,8 +32,8 @@ public class MobileSignalBridge {
                 }
 
                 int code = conn.getResponseCode();
-                if (code == 200) {
-                    System.out.println("📱 [Mobile Bridge] Signal sent successfully to app: " + pair + " " + action);
+                if (code == 200 || code == 201) {
+                    System.out.println("📱 [Mobile Bridge] Signal sent successfully to cloud API: " + pair + " " + action);
                 } else {
                     System.err.println("📱 [Mobile Bridge] Failed to send signal. HTTP Code: " + code);
                 }
@@ -50,7 +51,7 @@ public class MobileSignalBridge {
     public static void sendBalanceUpdate(String email, double balance) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://192.168.100.38:4567/user/update-balance");
+                URL url = new URL("https://fxausd.onrender.com/user/update-balance");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; utf-8");
