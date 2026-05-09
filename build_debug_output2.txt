@@ -1,0 +1,38 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+[INFO] Error stacktraces are turned on.
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.mycompany:Fxausd >------------------------
+[INFO] Building Fxausd 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ Fxausd ---
+[INFO] Deleting C:\Users\PC\Documents\NetBeansProjects\Fxausd\target
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ Fxausd ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ Fxausd ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 4 source files with javac [debug release 21] to target\classes
+[INFO] /C:/Users/PC/Documents/NetBeansProjects/Fxausd/src/main/java/com/mycompany/fxausd/Fxausd.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/PC/Documents/NetBeansProjects/Fxausd/src/main/java/com/mycompany/fxausd/Fxausd.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ Fxausd ---
+[INFO] skip non existing resourceDirectory C:\Users\PC\Documents\NetBeansProjects\Fxausd\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ Fxausd ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ Fxausd ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ Fxausd ---
+[INFO] Building jar: C:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.479 s
+[INFO] Finished at: 2026-04-21T22:41:44+03:00
+[INFO] ------------------------------------------------------------------------

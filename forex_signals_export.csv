@@ -1,0 +1,6 @@
+Direction,Entry,StopLoss,TakeProfit,MLConfidence,SMCConfluence,SignalStrength,Risk,Reward,RiskReward,Reason
+BUY,1.1760,1.1730,1.1835,90.84%,90.84%,63.03%,0.0030,0.0075,2.52:1,SMC BUY: HTF=FLAT, structure=1, OB=0.90, liquidity=0.06, FVG=0.00, flip=0.00, regime=ranging
+BUY,1.3632,1.3597,1.3714,74.69%,74.69%,57.23%,0.0035,0.0082,2.31:1,SMC BUY: HTF=UP, structure=1, OB=0.30, liquidity=0.11, FVG=0.00, flip=0.00, regime=ranging
+SELL,156.5390,157.0139,155.4442,67.99%,67.99%,56.56%,0.4749,1.0948,2.31:1,SMC SELL: HTF=FLAT, structure=0, OB=0.30, liquidity=0.08, FVG=0.00, flip=0.00, regime=ranging
+BUY,0.5901,0.5868,0.5977,72.79%,72.79%,53.94%,0.0033,0.0076,2.31:1,SMC BUY: HTF=FLAT, structure=1, OB=0.30, liquidity=0.14, FVG=0.00, flip=0.00, regime=ranging
+BUY,4585.2700,4578.5466,4600.7674,66.29%,66.29%,48.93%,6.7234,15.4974,2.31:1,SMC BUY: HTF=FLAT, structure=0, OB=0.30, liquidity=0.11, FVG=0.00, flip=0.00, regime=ranging

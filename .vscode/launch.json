@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run Fxausd",
+            "request": "launch",
+            "mainClass": "com.mycompany.fxausd.Fxausd",
+            "projectName": "Fxausd",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

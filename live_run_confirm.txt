@@ -1,0 +1,81 @@
+▶ MT5 endpoint configuration:
+   Order candidates: http://127.0.0.1:5001/api/order, http://127.0.0.1:5001/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5000/order
+   Chart candidates: http://127.0.0.1:5001/api/candles, http://127.0.0.1:5001/candles, http://127.0.0.1:5000/api/candles, http://127.0.0.1:5000/candles
+   Symbol candidates: http://127.0.0.1:5001/api/symbols, http://127.0.0.1:5001/symbols, http://127.0.0.1:5000/api/symbols, http://127.0.0.1:5000/symbols
+▶ liveMode enabled; args=[live]
+▶ Live strategy mode: smc
+▶ Live momentum threshold: 0.0003
+▶ Live ATR percent threshold: 0.000100
+▶ LIVE_SKIP_RSI_CHOP=false
+▶ LIVE_SKIP_HTF_STRUCTURE=false
+▶ LIVE_SKIP_BREAKOUT_RANGE=false
+▶ LIVE_FORCE_SIGNAL=false
+▶ resolved liveSymbols=[EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD]
+🌐 Fetching live candles from MT5 bridge for core FX symbols: EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD / M5 / 220
+🌐 Fetching live candles for EURUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=H1
+   📈 HTF H1 check for EURUSD: price=1.16859, EMA50=1.16990, EMA200=1.17241, structure=-1, momentum=-0.0021 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ❌ HOLD: SMC order block too weak for EURUSD on M5: 0.00 < 0.15
+🌐 Fetching live candles for GBPUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=H1
+   📈 HTF H1 check for GBPUSD: price=1.34914, EMA50=1.35028, EMA200=1.35133, structure=0, momentum=-0.0008 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for GBPUSD on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for GBPUSD on M5: 0.00 < 0.15
+🌐 Fetching live candles for USDJPY...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=H1
+   📈 HTF H1 check for USDJPY: price=160.14300, EMA50=159.83895, EMA200=159.36442, structure=0, momentum=0.0030 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for USDJPY on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for USDJPY on M5: 0.00 < 0.15
+🌐 Fetching live candles for XAUUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=H1
+   📈 HTF H1 check for XAUUSD: price=4562.46000, EMA50=4592.20786, EMA200=4686.38023, structure=0, momentum=-0.0201 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for XAUUSD on H1. Continuing with local SMC confluence checks.
+   SMC data: HTF=FLAT[0], structure=-1, OB=0.90, LIQ=0.17, FVG=0.00, FLIP=0.00, RSI=70.07, MOM=-0.0016, ATRpct=0.000929, mild=false, loose=false
+   FINAL SIGNAL: BUY | SMC BUY: HTF=FLAT, structure=-1, OB=0.90, liquidity=0.17, FVG=0.00, flip=0.00, regime=volatile
+🌐 Fetching live candles for NZDUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=H1
+   📈 HTF H1 check for NZDUSD: price=0.58432, EMA50=0.58638, EMA200=0.58814, structure=-1, momentum=-0.0030 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ❌ HOLD: SMC order block too weak for NZDUSD on M5: 0.00 < 0.15
+📊 Selected live signals: 1
+🔍 FINAL LIVE DECISION: EXECUTE 1 signal(s) with strict multi-timeframe confirmation.
+📊 Total Signals: 1 | BUY: 1 | SELL: 0 | Effective: 0 (0.0%) | Profitable: 1
+🎯 Avg ML Confidence: 87.86% | Avg Signal Strength: 63.89% | Avg R:R: 2.60:1
+📈 Profit Potential: 2.60:1 | Avg Reward: 15.50 | Total Risk Exposure: $5.97
+💰 Account Balance: $10000.00
+💸 Risk Per Trade: $200.00 (2%)
+📊 Total Exposure: $5.97 (0.06%) [✅ LOW]
+🔄 Max Concurrent Trades: 5
+📈 Recommended Lot Size: 2.00
+✅ Signals exported to: forex_signals_export.csv
+✅ AUTO_CONFIRM_SIGNALS enabled. Live execution confirmed automatically.
+📨 Sending live signals to MT5...
+✅ Sent MT5 order to http://127.0.0.1:5001/api/order: BUY 4562.42000
+   MT5 response: status=OrderSendResult(retcode=10009, deal=8008948527, order=8425251196, volume=0.1, price=4562.84, bid=0.0, ask=0.0, comment='Request executed', request_id=1091231640, retcode_external=0, request=TradeRequest(action=1, magic=123456, order=0, symbol='XAUUSD', volume=0.1, price=4562.91, stoplimit=0.0, sl=0.0, tp=0.0, deviation=10, type=0, type_filling=1, type_time=0, expiration=0, comment='flask bridge', position=0, position_by=0))
+⚠️ MT5 dispatch returned 404 from http://127.0.0.1:5001/order: <!doctype html><html lang=en><title>404 Not Found</title><h1>Not Found</h1><p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+   Payload: {"symbol":"XAUUSD","direction":"BUY","entry":4562.42000,"stopLoss":4556.44696,"takeProfit":4577.92004,"confidence":0.8786,"signalStrength":63.8922,"reason":"SMC BUY: HTF=FLAT, structure=-1, OB=0.90, liquidity=0.17, FVG=0.00, flip=0.00, regime=volatile"}
+⚠️ MT5 dispatch returned 404 from http://127.0.0.1:5001/order: <!doctype html><html lang=en><title>404 Not Found</title><h1>Not Found</h1><p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+   Payload: {"symbol":"XAUUSD","direction":"BUY","entry":4562.42000,"stopLoss":4556.44696,"takeProfit":4577.92004,"confidence":0.8786,"signalStrength":63.8922,"reason":"SMC BUY: HTF=FLAT, structure=-1, OB=0.90, liquidity=0.17, FVG=0.00, flip=0.00, regime=volatile"}
+⚠️ MT5 dispatch returned 404 from http://127.0.0.1:5001/order: <!doctype html><html lang=en><title>404 Not Found</title><h1>Not Found</h1><p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+   Payload: {"symbol":"XAUUSD","direction":"BUY","entry":4562.42000,"stopLoss":4556.44696,"takeProfit":4577.92004,"confidence":0.8786,"signalStrength":63.8922,"reason":"SMC BUY: HTF=FLAT, structure=-1, OB=0.90, liquidity=0.17, FVG=0.00, flip=0.00, regime=volatile"}
+❌ MT5 dispatch attempt 1 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 2 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 3 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 1 to http://127.0.0.1:5000/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 2 to http://127.0.0.1:5000/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 3 to http://127.0.0.1:5000/order failed: Connection refused: getsockopt
+✅ Sent MT5 order: BUY 4562.42
+💻 Dashboard server running on http://localhost:8901/
+✅ ForexBot API Server started on http://localhost:8888
+📊 Dashboard: http://localhost:8888/api/dashboard
+📱 Local network dashboard: http://192.168.100.30:8888/api/dashboard
+💡 ForexBot live API server is running. Press Ctrl+C to stop.

@@ -1,0 +1,4 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+✅ Loaded candles: 70
+🚀 TEST SIGNAL MODE ENABLED
+✅ Test signal sent to MT5: true

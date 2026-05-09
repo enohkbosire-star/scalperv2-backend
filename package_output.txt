@@ -1,0 +1,175 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.mycompany:Fxausd >------------------------
+[INFO] Building Fxausd 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ Fxausd ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ Fxausd ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ Fxausd ---
+[INFO] skip non existing resourceDirectory c:\Users\PC\Documents\NetBeansProjects\Fxausd\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ Fxausd ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ Fxausd ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ Fxausd ---
+[INFO] 
+[INFO] --- shade:3.4.1:shade (default) @ Fxausd ---
+[INFO] Including com.javax0.jamal:jamal-sql:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-api:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-tools:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0:levenshtein:jar:1.0.0 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-engine:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-core:jar:2.8.2 in the shaded jar.
+[INFO] Including com.github.jsqlparser:jsqlparser:jar:5.0 in the shaded jar.
+[INFO] Including com.google.code.gson:gson:jar:2.10.1 in the shaded jar.
+[INFO] Including org.jfree:jfreechart:jar:1.5.5 in the shaded jar.
+[INFO] Including org.jfree:jcommon:jar:1.0.24 in the shaded jar.
+[INFO] Dependency-reduced POM written at: c:\Users\PC\Documents\NetBeansProjects\Fxausd\dependency-reduced-pom.xml
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-core-2.8.2.jar, jamal-sql-2.8.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/javax0.jamal.api.Macro
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jfreechart-1.5.5.jar define 739 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.jfree/jfreechart/pom.properties
+[WARNING]   - META-INF/maven/org.jfree/jfreechart/pom.xml
+[WARNING]   - org.jfree.chart.ChartColor
+[WARNING]   - org.jfree.chart.ChartFactory
+[WARNING]   - org.jfree.chart.ChartFrame
+[WARNING]   - org.jfree.chart.ChartHints
+[WARNING]   - org.jfree.chart.ChartHints$Key
+[WARNING]   - org.jfree.chart.ChartMouseEvent
+[WARNING]   - org.jfree.chart.ChartMouseListener
+[WARNING]   - org.jfree.chart.ChartPanel
+[WARNING]   - 729 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-engine-2.8.2.jar define 46 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-engine/pom.properties
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-engine/pom.xml
+[WARNING]   - META-INF/services/javax.script.ScriptEngineFactory
+[WARNING]   - META-INF/services/javax0.jamal.api.Debugger
+[WARNING]   - javax0.jamal.DocumentConverter
+[WARNING]   - javax0.jamal.DocumentConverter$Excludes
+[WARNING]   - javax0.jamal.DocumentConverter$Includes
+[WARNING]   - javax0.jamal.Format
+[WARNING]   - javax0.jamal.Formatter
+[WARNING]   - javax0.jamal.JamalOutputStream
+[WARNING]   - 36 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, gson-2.10.1.jar define 220 overlapping classes and resources: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING]   - META-INF/maven/com.google.code.gson/gson/pom.properties
+[WARNING]   - META-INF/maven/com.google.code.gson/gson/pom.xml
+[WARNING]   - com.google.gson.ExclusionStrategy
+[WARNING]   - com.google.gson.FieldAttributes
+[WARNING]   - com.google.gson.FieldNamingPolicy
+[WARNING]   - com.google.gson.FieldNamingPolicy$1
+[WARNING]   - com.google.gson.FieldNamingPolicy$2
+[WARNING]   - com.google.gson.FieldNamingPolicy$3
+[WARNING]   - com.google.gson.FieldNamingPolicy$4
+[WARNING]   - 210 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, levenshtein-1.0.0.jar define 3 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.javax0/levenshtein/pom.properties
+[WARNING]   - META-INF/maven/com.javax0/levenshtein/pom.xml
+[WARNING]   - javax0.levenshtein.Levenshtein
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-tools-2.8.2.jar define 91 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-tools/pom.properties
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-tools/pom.xml
+[WARNING]   - META-INF/services/javax0.jamal.api.ResourceReader
+[WARNING]   - javax0.jamal.tools.Cache
+[WARNING]   - javax0.jamal.tools.Cache$Entry
+[WARNING]   - javax0.jamal.tools.Cache$NonexistentFile
+[WARNING]   - javax0.jamal.tools.CachedHttpInput
+[WARNING]   - javax0.jamal.tools.CachedHttpInput$HttpBufferedReader
+[WARNING]   - javax0.jamal.tools.Cast
+[WARNING]   - javax0.jamal.tools.CmdParser
+[WARNING]   - 81 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jsqlparser-5.0.jar define 488 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.github.jsqlparser/jsqlparser/pom.properties
+[WARNING]   - META-INF/maven/com.github.jsqlparser/jsqlparser/pom.xml
+[WARNING]   - net.sf.jsqlparser.JSQLParserException
+[WARNING]   - net.sf.jsqlparser.Model
+[WARNING]   - net.sf.jsqlparser.expression.Alias
+[WARNING]   - net.sf.jsqlparser.expression.Alias$AliasColumn
+[WARNING]   - net.sf.jsqlparser.expression.AllValue
+[WARNING]   - net.sf.jsqlparser.expression.AnalyticExpression
+[WARNING]   - net.sf.jsqlparser.expression.AnalyticExpression$1
+[WARNING]   - net.sf.jsqlparser.expression.AnalyticType
+[WARNING]   - 478 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-core-2.8.2.jar define 42 overlapping classes and resources: 
+[WARNING]   - .jim
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-core/pom.properties
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-core/pom.xml
+[WARNING]   - javax0.jamal.builtins.Begin
+[WARNING]   - javax0.jamal.builtins.Block
+[WARNING]   - javax0.jamal.builtins.Catch
+[WARNING]   - javax0.jamal.builtins.Comment
+[WARNING]   - javax0.jamal.builtins.Debug
+[WARNING]   - javax0.jamal.builtins.Defer
+[WARNING]   - javax0.jamal.builtins.Defer$DeferredCloser
+[WARNING]   - 32 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, gson-2.10.1.jar, jamal-api-2.8.2.jar, jamal-core-2.8.2.jar, jamal-engine-2.8.2.jar, jamal-sql-2.8.2.jar, jamal-tools-2.8.2.jar, jcommon-1.0.24.jar, jfreechart-1.5.5.jar, jsqlparser-5.0.jar, levenshtein-1.0.0.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jcommon-1.0.24.jar define 222 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.jfree/jcommon/pom.properties
+[WARNING]   - META-INF/maven/org.jfree/jcommon/pom.xml
+[WARNING]   - com.keypoint.PngEncoder
+[WARNING]   - org.jfree.JCommon
+[WARNING]   - org.jfree.JCommonInfo
+[WARNING]   - org.jfree.base.AbstractBoot
+[WARNING]   - org.jfree.base.BaseBoot
+[WARNING]   - org.jfree.base.BasicProjectInfo
+[WARNING]   - org.jfree.base.BasicProjectInfo$OptionalLibraryHolder
+[WARNING]   - org.jfree.base.BootableProjectInfo
+[WARNING]   - 212 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-api-2.8.2.jar define 70 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-api/pom.properties
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-api/pom.xml
+[WARNING]   - javax0.jamal.api.ASTNode
+[WARNING]   - javax0.jamal.api.ASTNode$Type
+[WARNING]   - javax0.jamal.api.BadSyntax
+[WARNING]   - javax0.jamal.api.BadSyntax$ThrowingSupplier
+[WARNING]   - javax0.jamal.api.BadSyntaxAt
+[WARNING]   - javax0.jamal.api.BadSyntaxAt$Runnable
+[WARNING]   - javax0.jamal.api.BadSyntaxAt$ThrowMayBe
+[WARNING]   - javax0.jamal.api.Closer
+[WARNING]   - 60 more...
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, jamal-sql-2.8.2.jar define 11 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-sql/pom.properties
+[WARNING]   - META-INF/maven/com.javax0.jamal/jamal-sql/pom.xml
+[WARNING]   - javax0.jamal.sql.Close
+[WARNING]   - javax0.jamal.sql.Connect
+[WARNING]   - javax0.jamal.sql.Connect$SqlConnectionHolder
+[WARNING]   - javax0.jamal.sql.Connect$SqlStatementHolder
+[WARNING]   - javax0.jamal.sql.Loop
+[WARNING]   - javax0.jamal.sql.Select
+[WARNING]   - javax0.jamal.sql.Select$ResultSetHolder
+[WARNING]   - javax0.jamal.sql.SqlTools
+[WARNING]   - 1 more...
+[WARNING] maven-shade-plugin has detected that some class files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the class is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing c:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT.jar with c:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT-shaded.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  13.233 s
+[INFO] Finished at: 2026-04-23T20:46:41+03:00
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,2 @@
+Timestamp,Symbol,Direction,Entry,StopLoss,TakeProfit,Confidence,SignalStrength,RiskPips,RewardPips,LotSize,Regime,SourceIndex,ResultPips,PNLUSD,ExitReason
+1776806519779,EURUSD,BUY,1.17523,1.17416,1.17834,0.7500,53.52,11.89,29.89,1.00,ranging,207,-10.69,-106.86,Stop Loss Hit

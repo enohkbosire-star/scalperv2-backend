@@ -1,0 +1,70 @@
+▶ MT5 endpoint configuration:
+   Order candidates: http://127.0.0.1:5001/api/order, http://127.0.0.1:5001/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5000/order
+   Chart candidates: http://127.0.0.1:5001/api/candles, http://127.0.0.1:5001/candles, http://127.0.0.1:5000/api/candles, http://127.0.0.1:5000/candles
+   Symbol candidates: http://127.0.0.1:5001/api/symbols, http://127.0.0.1:5001/symbols, http://127.0.0.1:5000/api/symbols, http://127.0.0.1:5000/symbols
+▶ liveMode enabled; args=[live]
+▶ Live strategy mode: smc
+▶ Live momentum threshold: 0.0003
+▶ Live ATR percent threshold: 0.000100
+▶ LIVE_SKIP_RSI_CHOP=false
+▶ LIVE_SKIP_HTF_STRUCTURE=false
+▶ LIVE_SKIP_BREAKOUT_RANGE=false
+▶ LIVE_FORCE_SIGNAL=false
+▶ resolved liveSymbols=[EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD]
+🌐 Fetching live candles from MT5 bridge for core FX symbols: EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD / M5 / 220
+🌐 Fetching live candles for EURUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=H1
+   📈 HTF H1 check for EURUSD: price=1.16873, EMA50=1.16991, EMA200=1.17241, structure=-1, momentum=-0.0021 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ❌ HOLD: SMC order block too weak for EURUSD on M5: 0.00 < 0.15
+🌐 Fetching live candles for GBPUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=H1
+   📈 HTF H1 check for GBPUSD: price=1.34933, EMA50=1.35029, EMA200=1.35134, structure=0, momentum=-0.0008 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for GBPUSD on H1. Continuing with local SMC confluence checks.
+   SMC data: HTF=FLAT[0], structure=0, OB=0.30, LIQ=0.13, FVG=0.00, FLIP=0.00, RSI=87.30, MOM=-0.0004, ATRpct=0.000205, mild=false, loose=false
+   FINAL SIGNAL: BUY | SMC BUY: HTF=FLAT, structure=0, OB=0.30, liquidity=0.13, FVG=0.00, flip=0.00, regime=volatile
+🌐 Fetching live candles for USDJPY...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=H1
+   📈 HTF H1 check for USDJPY: price=160.11600, EMA50=159.83789, EMA200=159.36415, structure=0, momentum=0.0030 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for USDJPY on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for USDJPY on M5: 0.00 < 0.15
+🌐 Fetching live candles for XAUUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=H1
+   📈 HTF H1 check for XAUUSD: price=4559.15000, EMA50=4592.07806, EMA200=4686.34730, structure=0, momentum=-0.0201 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for XAUUSD on H1. Continuing with local SMC confluence checks.
+   SMC data: HTF=FLAT[0], structure=-1, OB=0.90, LIQ=0.18, FVG=0.00, FLIP=0.00, RSI=59.85, MOM=-0.0019, ATRpct=0.000942, mild=false, loose=false
+   FINAL SIGNAL: BUY | SMC BUY: HTF=FLAT, structure=-1, OB=0.90, liquidity=0.18, FVG=0.00, flip=0.00, regime=volatile
+🌐 Fetching live candles for NZDUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=H1
+   📈 HTF H1 check for NZDUSD: price=0.58413, EMA50=0.58637, EMA200=0.58814, structure=-1, momentum=-0.0030 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   SMC data: HTF=DOWN[-1], structure=1, OB=0.30, LIQ=0.13, FVG=0.00, FLIP=0.00, RSI=76.97, MOM=-0.0011, ATRpct=0.000423, mild=false, loose=false
+   FINAL SIGNAL: SELL | SMC SELL: HTF=DOWN, structure=1, OB=0.30, liquidity=0.13, FVG=0.00, flip=0.00, regime=volatile
+📊 Selected live signals: 3
+🔍 FINAL LIVE DECISION: EXECUTE 3 signal(s) with strict multi-timeframe confirmation.
+📊 Total Signals: 3 | BUY: 2 | SELL: 1 | Effective: 1 (33.3%) | Profitable: 3
+🎯 Avg ML Confidence: 75.34% | Avg Signal Strength: 58.60% | Avg R:R: 2.46:1
+📈 Profit Potential: 2.59:1 | Avg Reward: 5.23 | Total Risk Exposure: $6.05
+💰 Account Balance: $10000.00
+💸 Risk Per Trade: $200.00 (2%)
+📊 Total Exposure: $6.05 (0.06%) [✅ LOW]
+🔄 Max Concurrent Trades: 5
+📈 Recommended Lot Size: 2.00
+✅ Signals exported to: forex_signals_export.csv
+
+🔔 LIVE TRADE CONFIRMATION REQUIRED
+   Signals ready for execution: 3
+   [1] XAUUSD BUY Entry=4559.15000 SL=4553.10962 TP=4574.82478 ML=89.7% SMC=89.7% Strength=72.1% R:R=2.60
+   [2] NZDUSD SELL Entry=0.58413 SL=0.58743 TP=0.57625 ML=69.4% SMC=69.4% Strength=54.0% R:R=2.39
+   [3] GBPUSD BUY Entry=1.34933 SL=1.34579 TP=1.35778 ML=66.9% SMC=66.9% Strength=49.7% R:R=2.39
+⚠️ SMTP_HOST not set; email not sent.
+⚠️ Email notification failed. Check SMTP configuration.
+Confirm live execution? (y/n): 

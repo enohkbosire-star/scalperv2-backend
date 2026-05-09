@@ -1,0 +1,128 @@
+//+------------------------------------------------------------------+
+//| ForexBot MT5 Expert Advisor                                       |
+//| Sends trading signals to Java ForexBot API Server                 |
+//+------------------------------------------------------------------+
+
+#property strict
+
+// Bot Configuration
+extern string BotServerIP = "localhost";
+extern int BotServerPort = 8888;
+extern string BotAPIKey = "forex_bot_secret_key_12345";
+extern string SymbolToTrade = "EURUSD";
+extern int SignalUpdateInterval = 60; // seconds
+
+// Indicator Parameters
+extern int RSIPeriod = 14;
+extern int MA20Period = 20;
+extern int MA50Period = 50;
+extern int ATRPeriod = 14;
+extern int BollingerPeriod = 20;
+
+// Global variables
+int lastSignalTime = 0;
+double lastSignalEntry = 0;
+
+//+------------------------------------------------------------------+
+//| Expert initialization                                             |
+//+------------------------------------------------------------------+
+int OnInit() {
+    Print("ForexBot MT5 Advisor initialized for " + SymbolToTrade);
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Expert start function                                             |
+//+------------------------------------------------------------------+
+void OnTick() {
+    // Check if enough time has passed since last signal
+    if (TimeCurrent() - lastSignalTime < SignalUpdateInterval) {
+        return;
+    }
+    
+    // Calculate indicators
+    double rsi = iRSI(SymbolToTrade, PERIOD_H1, RSIPeriod, PRICE_CLOSE, 0);
+    double ma20 = iMA(SymbolToTrade, PERIOD_H1, MA20Period, 0, MODE_SMA, PRICE_CLOSE, 0);
+    double ma50 = iMA(SymbolToTrade, PERIOD_H1, MA50Period, 0, MODE_SMA, PRICE_CLOSE, 0);
+    double close = iClose(SymbolToTrade, PERIOD_H1, 0);
+    double atr = iATR(SymbolToTrade, PERIOD_H1, ATRPeriod, 0);
+    
+    // Calculate Bollinger Bands
+    double bbUpper = iBands(SymbolToTrade, PERIOD_H1, BollingerPeriod, 2, 0, PRICE_CLOSE, MODE_UPPER, 0);
+    double bbLower = iBands(SymbolToTrade, PERIOD_H1, BollingerPeriod, 2, 0, PRICE_CLOSE, MODE_LOWER, 0);
+    
+    // Simple signal logic
+    string direction = "NONE";
+    string reason = "";
+    double confidence = 0;
+    
+    if (rsi < 30 && ma20 > ma50 && close > bbLower) {
+        direction = "BUY";
+        reason = "Oversold RSI + Bullish MA Cross + Above Lower BB";
+        confidence = 0.75;
+    } 
+    else if (rsi > 70 && ma20 < ma50 && close < bbUpper) {
+        direction = "SELL";
+        reason = "Overbought RSI + Bearish MA Cross + Below Upper BB";
+        confidence = 0.72;
+    }
+    
+    if (direction != "NONE") {
+        // Calculate entry/SL/TP
+        double entry = Ask;
+        double stopLoss, takeProfit;
+        
+        if (direction == "BUY") {
+            stopLoss = entry - 1.5 * atr;
+            takeProfit = entry + 3.0 * atr;
+        } else {
+            stopLoss = entry + 1.5 * atr;
+            takeProfit = entry - 3.0 * atr;
+        }
+        
+        // Send signal to ForexBot
+        SendSignalToBot(direction, entry, stopLoss, takeProfit, confidence, reason);
+        lastSignalTime = TimeCurrent();
+        lastSignalEntry = entry;
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Send signal to ForexBot Java API                                  |
+//+------------------------------------------------------------------+
+void SendSignalToBot(string direction, double entry, double sl, double tp, 
+                     double confidence, string reason) {
+    
+    // Build JSON request
+    string json = "{\"symbol\":\"" + SymbolToTrade + "\"," +
+                  "\"direction\":\"" + direction + "\"," +
+                  "\"entry\":" + DoubleToString(entry, 5) + "," +
+                  "\"stopLoss\":" + DoubleToString(sl, 5) + "," +
+                  "\"takeProfit\":" + DoubleToString(tp, 5) + "," +
+                  "\"confidence\":" + DoubleToString(confidence, 2) + "," +
+                  "\"signalStrength\":0.85," +
+                  "\"reason\":\"" + reason + "\"}";
+    
+    // HTTP headers
+    string headers = "Authorization: Bearer " + BotAPIKey + "\r\n" +
+                    "Content-Type: application/json\r\n";
+    
+    // Send POST request
+    string url = "http://" + BotServerIP + ":" + IntegerToString(BotServerPort) + "/api/signal";
+    
+    int response = WebRequest("POST", url, headers, NULL, json);
+    
+    if (response == 200) {
+        Print("✅ Signal sent to ForexBot: " + direction + " @ " + DoubleToString(entry, 5));
+    } else {
+        Print("❌ Failed to send signal. Response code: " + response);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization                                           |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason) {
+    Print("ForexBot MT5 Advisor deinitialized");
+}
+

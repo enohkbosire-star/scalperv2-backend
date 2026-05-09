@@ -1,0 +1,56 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+▶ MT5 endpoint configuration:
+   Order candidates: http://127.0.0.1:5001/api/order, http://127.0.0.1:5001/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5000/order
+   Chart candidates: http://127.0.0.1:5001/api/candles, http://127.0.0.1:5001/candles, http://127.0.0.1:5000/api/candles, http://127.0.0.1:5000/candles
+   Symbol candidates: http://127.0.0.1:5001/api/symbols, http://127.0.0.1:5001/symbols, http://127.0.0.1:5000/api/symbols, http://127.0.0.1:5000/symbols
+▶ liveMode enabled; args=[live]
+▶ Live strategy mode: smc
+▶ Live momentum threshold: 0.0003
+▶ Live ATR percent threshold: 0.000100
+▶ LIVE_SKIP_RSI_CHOP=false
+▶ LIVE_SKIP_HTF_STRUCTURE=false
+▶ LIVE_SKIP_BREAKOUT_RANGE=false
+▶ LIVE_FORCE_SIGNAL=false
+▶ resolved liveSymbols=[EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD]
+🌐 Fetching live candles from MT5 bridge for core FX symbols: EURUSD, GBPUSD, USDJPY, XAUUSD, NZDUSD / M5 / 220
+🌐 Fetching live candles for EURUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=EURUSD&count=220&timeframe=H1
+   📈 HTF H1 check for EURUSD: price=1.16850, EMA50=1.16990, EMA200=1.17241, structure=-1, momentum=-0.0021 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ❌ HOLD: SMC order block too weak for EURUSD on M5: 0.00 < 0.25
+🌐 Fetching live candles for GBPUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=GBPUSD&count=220&timeframe=H1
+   📈 HTF H1 check for GBPUSD: price=1.34891, EMA50=1.35027, EMA200=1.35133, structure=0, momentum=-0.0008 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for GBPUSD on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for GBPUSD on M5: 0.00 < 0.25
+🌐 Fetching live candles for USDJPY...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDJPY&count=220&timeframe=H1
+   📈 HTF H1 check for USDJPY: price=160.17500, EMA50=159.84021, EMA200=159.36474, structure=0, momentum=0.0030 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for USDJPY on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for USDJPY on M5: 0.00 < 0.25
+🌐 Fetching live candles for XAUUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=XAUUSD&count=220&timeframe=H1
+   📈 HTF H1 check for XAUUSD: price=4560.72000, EMA50=4592.13963, EMA200=4686.36292, structure=0, momentum=-0.0201 -> FLAT
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ⚠️ HTF unclear for XAUUSD on H1. Continuing with local SMC confluence checks.
+   ❌ HOLD: SMC order block too weak for XAUUSD on M5: 0.00 < 0.25
+🌐 Fetching live candles for NZDUSD...
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=NZDUSD&count=220&timeframe=H1
+   📈 HTF H1 check for NZDUSD: price=0.58405, EMA50=0.58637, EMA200=0.58813, structure=-1, momentum=-0.0030 -> DOWN
+   SMC confluence: strong=false, mild=false, loose=false, force=false
+   ❌ HOLD: SMC order block too weak for NZDUSD on M5: 0.00 < 0.25
+⚠️ No live signals were generated for the selected strategy and core FX symbols.
+⚠️ Port 8888 is already in use. Trying next available port...
+⚠️ Port 8889 is already in use. Trying next available port...
+⚠️ Port 8890 is already in use. Trying next available port...
+✅ ForexBot API Server started on http://localhost:8891 (requested 8888, bound after trying ports 8888-8891).
+📊 Dashboard: http://localhost:8891/api/dashboard
+📱 Local network dashboard: http://192.168.100.30:8891/api/dashboard
+💡 ForexBot live API server is running. Press Ctrl+C to stop.

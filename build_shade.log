@@ -1,0 +1,70 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.mycompany:Fxausd >------------------------
+[INFO] Building Fxausd 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ Fxausd ---
+[INFO] Deleting C:\Users\PC\Documents\NetBeansProjects\Fxausd\target
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ Fxausd ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ Fxausd ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 4 source files with javac [debug release 21] to target\classes
+[INFO] /C:/Users/PC/Documents/NetBeansProjects/Fxausd/src/main/java/com/mycompany/fxausd/Fxausd.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/PC/Documents/NetBeansProjects/Fxausd/src/main/java/com/mycompany/fxausd/Fxausd.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ Fxausd ---
+[INFO] skip non existing resourceDirectory C:\Users\PC\Documents\NetBeansProjects\Fxausd\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ Fxausd ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ Fxausd ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ Fxausd ---
+[INFO] Building jar: C:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT.jar
+[INFO] 
+[INFO] --- shade:3.4.1:shade (default) @ Fxausd ---
+[INFO] Including com.javax0.jamal:jamal-sql:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-api:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-tools:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0:levenshtein:jar:1.0.0 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-engine:jar:2.8.2 in the shaded jar.
+[INFO] Including com.javax0.jamal:jamal-core:jar:2.8.2 in the shaded jar.
+[INFO] Including com.github.jsqlparser:jsqlparser:jar:5.0 in the shaded jar.
+[INFO] Including com.google.code.gson:gson:jar:2.10.1 in the shaded jar.
+[INFO] Including org.jfree:jfreechart:jar:1.5.5 in the shaded jar.
+[INFO] Including org.jfree:jcommon:jar:1.0.24 in the shaded jar.
+[INFO] Dependency-reduced POM written at: C:\Users\PC\Documents\NetBeansProjects\Fxausd\dependency-reduced-pom.xml
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] jamal-core-2.8.2.jar, jamal-sql-2.8.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/javax0.jamal.api.Macro
+[WARNING] Fxausd-1.0-SNAPSHOT.jar, gson-2.10.1.jar, jamal-api-2.8.2.jar, jamal-core-2.8.2.jar, jamal-engine-2.8.2.jar, jamal-sql-2.8.2.jar, jamal-tools-2.8.2.jar, jcommon-1.0.24.jar, jfreechart-1.5.5.jar, jsqlparser-5.0.jar, levenshtein-1.0.0.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] maven-shade-plugin has detected that some class files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the class is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing C:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT.jar with C:\Users\PC\Documents\NetBeansProjects\Fxausd\target\Fxausd-1.0-SNAPSHOT-shaded.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  27.076 s
+[INFO] Finished at: 2026-04-21T23:22:22+03:00
+[INFO] ------------------------------------------------------------------------

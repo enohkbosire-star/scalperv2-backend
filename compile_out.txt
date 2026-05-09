@@ -1,0 +1,2 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+Terminate batch job (Y/N)? Terminate batch job (Y/N)? 
