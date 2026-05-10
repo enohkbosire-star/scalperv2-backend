@@ -56,6 +56,17 @@ public class CloudAPI {
         initDatabase();
 
         // =========================
+        // HEALTH CHECK & KEEP-ALIVE
+        // =========================
+        get("/", (req, res) -> {
+            Map<String, Object> health = new HashMap<>();
+            health.put("status", "ONLINE");
+            health.put("service", "FXAUSD INSTITUTIONAL BOT");
+            health.put("timestamp", System.currentTimeMillis());
+            return gson.toJson(health);
+        });
+
+        // =========================
         // CORE BOT FEED & PULSE
         // =========================
         get("/api/bot-pulse", (req, res) -> {
@@ -124,6 +135,31 @@ public class CloudAPI {
                 return gson.toJson(Map.of("status", "success"));
             }
             return gson.toJson(Map.of("status", "fail", "message", "Invalid OTP"));
+        });
+
+        get("/news", (req, res) -> {
+            List<Map<String, Object>> newsList = new ArrayList<>();
+            try (Connection conn = connect()) {
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM news ORDER BY id DESC LIMIT 20");
+                while (rs.next()) {
+                    newsList.add(Map.of(
+                        "id", rs.getInt("id"),
+                        "title", rs.getString("title"),
+                        "time", rs.getString("time"),
+                        "impact", rs.getString("impact"),
+                        "currency", rs.getString("currency")
+                    ));
+                }
+            } catch (Exception e) {}
+            return gson.toJson(newsList);
+        });
+
+        get("/live-classes", (req, res) -> {
+            List<Map<String, String>> classes = Arrays.asList(
+                Map.of("title", "Institutional Order Blocks", "time", "LIVE NOW", "link", "https://meet.google.com/abc-defg-hij"),
+                Map.of("title", "Quantum Strategy v16 Mastery", "time", "Tomorrow 14:00 UTC", "link", "")
+            );
+            return gson.toJson(classes);
         });
 
         // =========================
@@ -414,6 +450,75 @@ public class CloudAPI {
                 ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        post("/user/feedback", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO feedbacks(email, feedback) VALUES (?, ?)");
+                ps.setString(1, data.get("email")); ps.setString(2, data.get("feedback"));
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        post("/user/update-profile", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("UPDATE users SET profile_pic_url=? WHERE email=?");
+                ps.setString(1, data.get("profile_pic_url")); ps.setString(2, data.get("email"));
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        get("/community/stats", (req, res) -> {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("active_now", new Random().nextInt(50) + 120);
+            stats.put("total_members", 5840);
+            return gson.toJson(stats);
+        });
+
+        post("/community/request-join", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("UPDATE users SET community_status='pending' WHERE email=?");
+                ps.setString(1, data.get("email"));
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        get("/app/config", (req, res) -> {
+            Map<String, Object> config = new HashMap<>();
+            config.put("min_version", "2.0.0");
+            config.put("maintenance", false);
+            config.put("announcement", "Quantum OMNI v16.0 is now live!");
+            return gson.toJson(config);
+        });
+
+        get("/admin/status", (req, res) -> {
+            Map<String, Object> adminStatus = new HashMap<>();
+            adminStatus.put("server_uptime", System.currentTimeMillis());
+            adminStatus.put("bot_active", isBotActive);
+            adminStatus.put("active_sessions", 42);
+            return gson.toJson(adminStatus);
+        });
+
+        post("/admin/toggle-bot", (req, res) -> {
+            isBotActive = !isBotActive;
+            return gson.toJson(Map.of("status", "success", "bot_active", isBotActive));
+        });
+
+        post("/upload", (req, res) -> {
+            req.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/tmp"));
+            try (InputStream is = req.raw().getPart("file").getInputStream()) {
+                String fileName = "upload_" + System.currentTimeMillis() + ".jpg";
+                Files.copy(is, Path.of("uploads/" + fileName), StandardCopyOption.REPLACE_EXISTING);
+                return gson.toJson(Map.of("status", "success", "url", "https://fxausd.onrender.com/" + fileName));
+            } catch (Exception e) {
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage()));
+            }
         });
 
         post("/user/update-balance", (req, res) -> {
