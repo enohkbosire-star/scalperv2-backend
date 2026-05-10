@@ -63,12 +63,6 @@ public class Fxausd {
     static final double ELITE_MIN_ML_PROBABILITY = 0.82;
     static final double ELITE_MIN_RR_RATIO = 2.5;
 
-    // Institutional Elite Thresholds (Targeting 90%+ Win Rate Precision)
-    static final double ELITE_MIN_SMC_CONFLUENCE = 0.88;
-    static final double ELITE_MIN_VOLUME_SPIKE = 1.35;
-    static final double ELITE_MIN_ML_PROBABILITY = 0.82;
-    static final double ELITE_MIN_RR_RATIO = 2.5;
-
     // Advanced Market Intelligence Data
     public static class MarketIntelligence {
         public String bias = "NEUTRAL";
@@ -3150,66 +3144,6 @@ public class Fxausd {
             }
         }
 
-        return signals;
-    }
-
-    // ===============================
-    // QUANTUM ELITE STRATEGY (90%+ PRECISION)
-    // ===============================
-    private static java.util.List<TradeSignal> generateEliteQuantumSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
-        java.util.List<TradeSignal> signals = new ArrayList<>();
-        if (candles == null || candles.size() < 200) return signals;
-
-        int last = candles.size() - 1;
-        double price = candles.get(last).close;
-        double atr = calculateATR(candles, last, 14);
-        
-        // 1. Triple Timeframe Fractal Alignment
-        TrendStructure h4 = getHigherTimeframeTrendStructure(symbol, "H4", 250);
-        TrendStructure h1 = getHigherTimeframeTrendStructure(symbol, "H1", 200);
-        int m5Structure = detectMarketStructure(candles, last, 25);
-        
-        boolean fractalBullish = h4.trend.equals("UP") && h1.trend.equals("UP") && m5Structure == 1;
-        boolean fractalBearish = h4.trend.equals("DOWN") && h1.trend.equals("DOWN") && m5Structure == -1;
-        
-        if (!fractalBullish && !fractalBearish) {
-            System.out.println("   ❌ HOLD: No fractal alignment for " + symbol);
-            return signals;
-        }
-
-        // 2. Institutional Order Block + FVG Confluence
-        double ob = detectOrderBlock(candles, last, 15);
-        double fvg = detectFairValueGap(candles, last);
-        double liquidity = detectLiquidityZone(candles, last, 20);
-        
-        double smcConfluence = (ob * 0.4) + (fvg * 0.3) + (liquidity * 0.3);
-        if (smcConfluence < ELITE_MIN_SMC_CONFLUENCE) {
-            System.out.println("   ❌ HOLD: Weak SMC Confluence (" + String.format("%.2f", smcConfluence) + ") for " + symbol);
-            return signals;
-        }
-
-        // 3. Volume Price Analysis (VPA) - Identify "Smart Money" injection
-        double avgVol = calculateAverageVolume(candles, last, 20);
-        double volRatio = candles.get(last).volume / Math.max(avgVol, 1.0);
-        if (volRatio < ELITE_MIN_VOLUME_SPIKE) {
-            System.out.println("   ❌ HOLD: Insufficient volume spike (" + String.format("%.2fx", volRatio) + ") for " + symbol);
-            return signals;
-        }
-
-        // 4. ML Quantum Filter (Simulated for high precision)
-        double mlProb = 0.85 + (new Random().nextDouble() * 0.1); 
-        if (mlProb < ELITE_MIN_ML_PROBABILITY) return signals;
-
-        // 5. Execution Logic
-        String direction = fractalBullish ? "BUY" : "SELL";
-        double stopLoss = fractalBullish ? (price - atr * 1.5) : (price + atr * 1.5);
-        double takeProfit = fractalBullish ? (price + atr * 4.5) : (price - atr * 4.5); // Targeting 1:3+ RR
-        
-        double strength = (smcConfluence * 40) + (mlProb * 40) + (Math.min(1.0, volRatio/2.0) * 20);
-        String reason = String.format("ELITE QUANTUM: Triple Fractal Align + OB/FVG Confluence + Volume Spike (%.2fx)", volRatio);
-
-        System.out.println("   🎯 A+ SETUP DETECTED: " + symbol + " " + direction + " (Precision Score: " + String.format("%.1f%%", strength) + ")");
-        signals.add(new TradeSignal(symbol, direction, price, stopLoss, takeProfit, mlProb, smcConfluence, Math.min(100.0, strength), reason, atr * 1.5, atr * 4.5));
         return signals;
     }
 
