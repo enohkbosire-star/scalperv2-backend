@@ -64,15 +64,35 @@ public class CloudAPI {
             pulse.put("insight", lastSignalInsight);
             pulse.put("market_open", !Fxausd.isForexMarketClosed());
             pulse.put("timestamp", System.currentTimeMillis());
+            
+            // Add Super Intelligence data
+            pulse.put("bias", Fxausd.currentIntel.bias);
+            pulse.put("session", Fxausd.currentIntel.session);
+            pulse.put("setup_quality", Fxausd.currentIntel.setupQuality);
+            pulse.put("bos_detected", Fxausd.currentIntel.bos);
+            pulse.put("choch_detected", Fxausd.currentIntel.choch);
+            
             return gson.toJson(pulse);
         });
 
         get("/api/intelligence", (req, res) -> {
             Map<String, Object> intel = new HashMap<>();
-            intel.put("session", "LONDON/NY OVERLAP");
-            intel.put("bias", "INSTITUTIONAL BULLISH");
-            intel.put("volatility", "HIGH");
+            intel.put("session", Fxausd.currentIntel.session);
+            intel.put("bias", Fxausd.currentIntel.bias);
+            intel.put("bos", Fxausd.currentIntel.bos);
+            intel.put("choch", Fxausd.currentIntel.choch);
+            intel.put("liquidity_score", Fxausd.currentIntel.liquidityScore);
+            intel.put("market_status", !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED");
             return gson.toJson(intel);
+        });
+
+        get("/welcome-quotes", (req, res) -> {
+            List<String> q = Arrays.asList(
+                "Welcome to FXAUSD - Your Institutional AI Partner.",
+                "“Our Quantum model is now scanning 20+ pairs for A+ liquidity.”",
+                "“Institutional trading requires 90% discipline and 10% execution.”"
+            );
+            return gson.toJson(q);
         });
 
         post("/request-otp", (req, res) -> {
@@ -139,17 +159,27 @@ public class CloudAPI {
         });
 
         // =========================
-        // AI ASSISTANT
+        // AI NEURAL ASSISTANT (Market Aware)
         // =========================
         post("/ai/chat", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String userMsg = data.get("message").toLowerCase();
-            String response = "I am the FXAUSD AI-1 Neural Assistant. Query acknowledged: " + userMsg;
-            if (userMsg.contains("gold") || userMsg.contains("xauusd")) {
-                response = "⚡ [Neural Structural Audit] XAUUSD exhibits institutional liquidity above 2058. Market Bias: Bullish.";
-            } else if (userMsg.contains("risk")) {
-                response = "🛡️ [Elite Risk Protocol] Adhere to the 1.5% fixed fractional model. Equity * RiskRatio / (SL * PipValue).";
+            
+            String response;
+            if (userMsg.contains("status") || userMsg.contains("market")) {
+                response = String.format("🤖 [Neural Audit] The market is currently %s. I am detecting a %s bias with a liquidity score of %.2f.", 
+                    !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED", 
+                    Fxausd.currentIntel.bias, 
+                    Fxausd.currentIntel.liquidityScore);
+            } else if (userMsg.contains("gold") || userMsg.contains("xauusd")) {
+                response = "⚡ [Asset Intel] XAUUSD is exhibiting institutional accumulation zones. Our Quantum model identifies potential long liquidity at 2035.";
+            } else if (userMsg.contains("setup") || userMsg.contains("signal")) {
+                response = String.format("🛡️ [Risk Protocol] Current Setup Quality is %s. Current session: %s. I suggest awaiting a clean CHoCH before execution.", 
+                    Fxausd.currentIntel.setupQuality, Fxausd.currentIntel.session);
+            } else {
+                response = "I am the FXAUSD Institutional AI. I am constantly scanning H4 and H1 fractals for A+ setups. Ask me about current 'bias', 'gold', or 'setups'.";
             }
+
             return gson.toJson(Map.of("response", response));
         });
 
@@ -216,6 +246,39 @@ public class CloudAPI {
         });
 
         // =========================
+        // IDENTITY VERIFICATION
+        // =========================
+        post("/verify/request-otp", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            String email = data.get("email");
+            String phone = data.get("phone");
+            
+            String otp = String.format("%06d", new Random().nextInt(999999));
+            otpStorage.put(email.toLowerCase().trim() + "_verify", otp);
+            
+            System.out.println("🆔 Identity Verification for " + phone + ": " + otp);
+            sendEmail(email, "Identity Verification Code", "Your code is: " + otp);
+            return gson.toJson(Map.of("status", "success"));
+        });
+
+        post("/verify/confirm", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            String email = data.get("email").toLowerCase().trim();
+            String otp = data.get("otp");
+            
+            if (otpStorage.containsKey(email + "_verify") && otpStorage.get(email + "_verify").equals(otp)) {
+                otpStorage.remove(email + "_verify");
+                try (Connection conn = connect()) {
+                    PreparedStatement ps = conn.prepareStatement("UPDATE users SET is_approved=TRUE WHERE email=?");
+                    ps.setString(1, email);
+                    ps.executeUpdate();
+                } catch (Exception e) {}
+                return gson.toJson(Map.of("status", "success", "real_name", "Verified Trader"));
+            }
+            return gson.toJson(Map.of("status", "fail"));
+        });
+
+        // =========================
         // LOGIN
         // =========================
         post("/login", (req, res) -> {
@@ -239,6 +302,7 @@ public class CloudAPI {
                         resp.put("user_id", "FX-" + rs.getInt("id"));
                         resp.put("is_admin", rs.getBoolean("is_admin"));
                         resp.put("is_approved", rs.getBoolean("is_approved"));
+                        resp.put("profile_pic_url", rs.getString("profile_pic_url"));
                         System.out.println("✅ Login Success: " + email);
                         return gson.toJson(resp);
                     } else {
@@ -253,16 +317,53 @@ public class CloudAPI {
             }
         });
 
+        post("/signup", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            String email = data.get("email");
+            String name = data.get("name");
+            String password = data.get("password");
+            
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO users (email, name, password) VALUES (?, ?, ?)");
+                ps.setString(1, email);
+                ps.setString(2, name);
+                ps.setString(3, password);
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) {
+                return gson.toJson(Map.of("status", "error", "message", "Registration failed. User may already exist."));
+            }
+        });
+
         // =========================
-        // COMMUNITY & CHAT
+        // COMMUNITY & FEED (Institutional Grade)
         // =========================
         get("/statuses", (req, res) -> {
             List<Map<String, Object>> list = new ArrayList<>();
             try (Connection conn = connect()) {
-                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM statuses ORDER BY id DESC LIMIT 50");
-                while (rs.next()) list.add(Map.of("id", rs.getInt("id"), "name", rs.getString("name"), "content", rs.getString("content"), "likes", rs.getInt("likes")));
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM statuses ORDER BY timestamp DESC LIMIT 50");
+                while (rs.next()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", rs.getInt("id"));
+                    m.put("name", rs.getString("name"));
+                    m.put("content", rs.getString("content"));
+                    m.put("likes", rs.getInt("likes"));
+                    m.put("timestamp", rs.getTimestamp("timestamp").toString());
+                    list.add(m);
+                }
             } catch (Exception e) {}
             return gson.toJson(list);
+        });
+
+        post("/statuses/like", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            int id = ((Double) data.get("id")).intValue();
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("UPDATE statuses SET likes = likes + 1 WHERE id=?");
+                ps.setInt(1, id);
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
 
         post("/statuses/post", (req, res) -> {
