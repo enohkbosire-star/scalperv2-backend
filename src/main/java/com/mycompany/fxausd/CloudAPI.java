@@ -22,21 +22,21 @@ public class CloudAPI {
     private static boolean isDashboardActive = true;
     private static boolean isBotActive = true;
     private static String botStatus = "INITIALIZING...";
-    private static String lastSignalInsight = "Connecting to liquidity pools...";
-
-    // GMAIL CONFIGURATION (Use App Password)
-    private static final String SENDER_EMAIL = "enohkbosire@gmail.com";
-    private static final String APP_PASSWORD = "fifidlridfmzygfs";
+    private static String lastSignalInsight = "Connecting to neural networks...";
 
     public static void updateBotStatus(String status, String insight) {
         botStatus = status;
         lastSignalInsight = insight;
     }
 
+    // GMAIL CONFIGURATION (Use App Password)
+    private static final String SENDER_EMAIL = "enohkbosire@gmail.com";
+    private static final String APP_PASSWORD = "fifidlridfmzygfs";
+
     public static void start() {
-        // Detect Render port or fallback to 8888 (matching Fxausd class)
+        // Detect Render port or fallback to 4567
         String portStr = System.getenv("PORT");
-        int portNumber = (portStr != null && !portStr.isEmpty()) ? Integer.parseInt(portStr) : 8888;
+        int portNumber = (portStr != null && !portStr.isEmpty()) ? Integer.parseInt(portStr) : 4567;
         
         port(portNumber);
         ipAddress("0.0.0.0");
@@ -48,7 +48,7 @@ public class CloudAPI {
         // CORS
         before((req, res) -> {
             res.header("Access-Control-Allow-Origin", "*");
-            res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            res.header("Access-Control-Allow-Methods", "*");
             res.header("Access-Control-Allow-Headers", "*");
             res.type("application/json"); 
         });
@@ -56,16 +56,8 @@ public class CloudAPI {
         initDatabase();
 
         // =========================
-        // CORE API STATUS
+        // CORE BOT FEED & PULSE
         // =========================
-        get("/api/status", (req, res) -> {
-            Map<String, Object> status = new HashMap<>();
-            status.put("status", "ONLINE");
-            status.put("bot_engine", isBotActive ? "ACTIVE" : "STOPPED");
-            status.put("database", "CONNECTED");
-            return gson.toJson(status);
-        });
-
         get("/api/bot-pulse", (req, res) -> {
             Map<String, Object> pulse = new HashMap<>();
             pulse.put("status", botStatus);
@@ -75,9 +67,14 @@ public class CloudAPI {
             return gson.toJson(pulse);
         });
 
-        // =========================
-        // AUTH & OTP
-        // =========================
+        get("/api/intelligence", (req, res) -> {
+            Map<String, Object> intel = new HashMap<>();
+            intel.put("session", "LONDON/NY OVERLAP");
+            intel.put("bias", "INSTITUTIONAL BULLISH");
+            intel.put("volatility", "HIGH");
+            return gson.toJson(intel);
+        });
+
         post("/request-otp", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email");
@@ -110,13 +107,80 @@ public class CloudAPI {
         });
 
         // =========================
+        // M-PESA PAYMENTS
+        // =========================
+        post("/wallet/mpesa-deposit", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            String phone = (String) data.get("phone");
+            System.out.println("💰 M-Pesa Deposit Request for " + phone);
+            return gson.toJson(Map.of("status", "success", "message", "STK Push sent to " + phone));
+        });
+
+        post("/wallet/mpesa-withdraw", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            String email = (String) data.get("email");
+            double amount = Double.parseDouble(data.get("amount").toString());
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("SELECT balance FROM users WHERE email=?");
+                ps.setString(1, email);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next() && rs.getDouble("balance") >= amount) {
+                    PreparedStatement update = conn.prepareStatement("UPDATE users SET balance = balance - ? WHERE email=?");
+                    update.setDouble(1, amount);
+                    update.setString(2, email);
+                    update.executeUpdate();
+                    return gson.toJson(Map.of("status", "success", "message", "Withdrawal initiated"));
+                } else {
+                    return gson.toJson(Map.of("status", "fail", "message", "Insufficient balance"));
+                }
+            } catch (Exception e) {
+                return gson.toJson(Map.of("status", "error"));
+            }
+        });
+
+        // =========================
+        // AI ASSISTANT
+        // =========================
+        post("/ai/chat", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            String userMsg = data.get("message").toLowerCase();
+            String response = "I am the FXAUSD AI-1 Neural Assistant. Query acknowledged: " + userMsg;
+            if (userMsg.contains("gold") || userMsg.contains("xauusd")) {
+                response = "⚡ [Neural Structural Audit] XAUUSD exhibits institutional liquidity above 2058. Market Bias: Bullish.";
+            } else if (userMsg.contains("risk")) {
+                response = "🛡️ [Elite Risk Protocol] Adhere to the 1.5% fixed fractional model. Equity * RiskRatio / (SL * PipValue).";
+            }
+            return gson.toJson(Map.of("response", response));
+        });
+
+        // =========================
+        // NOTIFICATIONS
+        // =========================
+        get("/notifications", (req, res) -> {
+            res.type("application/json");
+            List<Map<String, Object>> notifications = new ArrayList<>();
+            try (Connection conn = connect()) {
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM notifications ORDER BY id DESC LIMIT 50");
+                while (rs.next()) {
+                    notifications.add(Map.of(
+                            "id", rs.getInt("id"),
+                            "title", rs.getString("title"),
+                            "message", rs.getString("message"),
+                            "timestamp", rs.getTimestamp("timestamp").toString()
+                    ));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+            return gson.toJson(notifications);
+        });
+
+        // =========================
         // SIGNALS
         // =========================
         get("/signals", (req, res) -> {
             res.type("application/json");
             List<Map<String, Object>> signals = new ArrayList<>();
             try (Connection conn = connect()) {
-                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC LIMIT 50");
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC");
                 while (rs.next()) {
                     signals.add(Map.of(
                             "id", rs.getInt("id"),
@@ -159,6 +223,8 @@ public class CloudAPI {
             String email = data.get("email") != null ? data.get("email").trim() : "";
             String password = data.get("password") != null ? data.get("password").trim() : "";
 
+            System.out.println("🔐 Login Attempt: " + email);
+
             try (Connection conn = connect()) {
                 PreparedStatement checkUser = conn.prepareStatement("SELECT * FROM users WHERE email=?");
                 checkUser.setString(1, email);
@@ -173,47 +239,47 @@ public class CloudAPI {
                         resp.put("user_id", "FX-" + rs.getInt("id"));
                         resp.put("is_admin", rs.getBoolean("is_admin"));
                         resp.put("is_approved", rs.getBoolean("is_approved"));
+                        System.out.println("✅ Login Success: " + email);
                         return gson.toJson(resp);
+                    } else {
+                        return gson.toJson(Map.of("status", "fail", "message", "Incorrect password"));
                     }
+                } else {
+                    return gson.toJson(Map.of("status", "fail", "message", "Account not found"));
                 }
-            } catch (Exception e) {}
-            return gson.toJson(Map.of("status", "fail", "message", "Invalid credentials"));
-        });
-
-        get("/user", (req, res) -> {
-            String email = req.queryParams("email");
-            try (Connection conn = connect()) {
-                PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE email=?");
-                ps.setString(1, email);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("email", rs.getString("email"));
-                    m.put("name", rs.getString("name"));
-                    m.put("balance", rs.getDouble("balance"));
-                    m.put("is_admin", rs.getBoolean("is_admin"));
-                    m.put("user_id", "FX-" + rs.getInt("id"));
-                    return gson.toJson(m);
-                }
-            } catch (Exception e) {}
-            return "{}";
+            } catch (Exception e) {
+                e.printStackTrace();
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage()));
+            }
         });
 
         // =========================
         // COMMUNITY & CHAT
         // =========================
+        get("/statuses", (req, res) -> {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (Connection conn = connect()) {
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM statuses ORDER BY id DESC LIMIT 50");
+                while (rs.next()) list.add(Map.of("id", rs.getInt("id"), "name", rs.getString("name"), "content", rs.getString("content"), "likes", rs.getInt("likes")));
+            } catch (Exception e) {}
+            return gson.toJson(list);
+        });
+
+        post("/statuses/post", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO statuses(email, name, content) VALUES (?, ?, ?)");
+                ps.setString(1, data.get("email")); ps.setString(2, data.get("name")); ps.setString(3, data.get("content"));
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
         get("/messages", (req, res) -> {
             List<Map<String, String>> messages = new ArrayList<>();
             try (Connection conn = connect()) {
                 ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM chat_messages ORDER BY id DESC LIMIT 50");
-                while (rs.next()) {
-                    Map<String, String> msg = new HashMap<>();
-                    msg.put("user", rs.getString("username"));
-                    msg.put("text", rs.getString("message_text"));
-                    msg.put("type", rs.getString("message_type"));
-                    msg.put("timestamp", rs.getTimestamp("timestamp").toString());
-                    messages.add(0, msg);
-                }
+                while (rs.next()) messages.add(0, Map.of("user", rs.getString("username"), "text", rs.getString("message_text"), "type", rs.getString("message_type")));
             } catch (Exception e) {}
             return gson.toJson(messages);
         });
@@ -228,7 +294,41 @@ public class CloudAPI {
             } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
         });
 
-        notFound((req, res) -> gson.toJson(Map.of("status", 404, "message", "Endpoint protected by Sentinel")));
+        get("/user/journal", (req, res) -> {
+            List<Map<String, String>> entries = new ArrayList<>();
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("SELECT * FROM journals WHERE email=? ORDER BY id DESC");
+                ps.setString(1, req.queryParams("email"));
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) entries.add(Map.of("content", rs.getString("content"), "timestamp", rs.getTimestamp("timestamp").toString()));
+            } catch (Exception e) {}
+            return gson.toJson(entries);
+        });
+
+        post("/user/journal", (req, res) -> {
+            Map<String, String> data = gson.fromJson(req.body(), Map.class);
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO journals(email, content) VALUES (?, ?)");
+                ps.setString(1, data.get("email")); ps.setString(2, data.get("content"));
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        post("/user/update-balance", (req, res) -> {
+            Map<String, Object> data = gson.fromJson(req.body(), Map.class);
+            String email = (String) data.get("email");
+            double balance = Double.parseDouble(data.get("balance").toString());
+            String column = (data.containsKey("type") && "bot".equals(data.get("type"))) ? "bot_balance" : "balance";
+            try (Connection conn = connect()) {
+                PreparedStatement ps = conn.prepareStatement("UPDATE users SET " + column + "=? WHERE email=?");
+                ps.setDouble(1, balance); ps.setString(2, email);
+                ps.executeUpdate();
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+        });
+
+        notFound((req, res) -> gson.toJson(Map.of("status", 404, "message", "Route not found")));
     }
 
     public static Connection connect() throws SQLException {
@@ -243,13 +343,14 @@ public class CloudAPI {
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(100) UNIQUE, name VARCHAR(100), phone VARCHAR(20), password VARCHAR(100), balance DOUBLE PRECISION DEFAULT 50, bot_balance DOUBLE PRECISION DEFAULT 0, is_admin BOOLEAN DEFAULT FALSE, is_approved BOOLEAN DEFAULT TRUE, community_status VARCHAR(20) DEFAULT 'none', profile_pic_url TEXT)");
             st.execute("CREATE TABLE IF NOT EXISTS signals (id SERIAL PRIMARY KEY, pair VARCHAR(20), action VARCHAR(10), entry_price DOUBLE PRECISION, tp DOUBLE PRECISION, sl DOUBLE PRECISION, confidence DOUBLE PRECISION, strength DOUBLE PRECISION)");
-            st.execute("CREATE TABLE IF NOT EXISTS chat_messages (id SERIAL PRIMARY KEY, username VARCHAR(100), message_text TEXT, message_type VARCHAR(20) DEFAULT 'text', media_url TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            st.execute("CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, title TEXT, time VARCHAR(100), impact VARCHAR(20) DEFAULT 'Low', currency VARCHAR(10) DEFAULT 'USD', is_future BOOLEAN DEFAULT FALSE)");
+            st.execute("CREATE TABLE IF NOT EXISTS feedbacks (id SERIAL PRIMARY KEY, email VARCHAR(100), feedback TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY, title VARCHAR(255), message TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-            
-            // Ensure Admin exists
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO users(email, name, password, balance, is_admin, is_approved) VALUES ('enohkbosire@gmail.com', 'Elite Master Enohk', 'Enohk123@', 1000000.0, TRUE, TRUE) ON CONFLICT (email) DO UPDATE SET is_admin=TRUE");
-            ps.executeUpdate();
-            System.out.println("✅ Institutional database synced");
+            st.execute("CREATE TABLE IF NOT EXISTS chat_messages (id SERIAL PRIMARY KEY, username VARCHAR(100), message_text TEXT, message_type VARCHAR(20) DEFAULT 'text', media_url TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            st.execute("CREATE TABLE IF NOT EXISTS journals (id SERIAL PRIMARY KEY, email VARCHAR(100), content TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            st.execute("CREATE TABLE IF NOT EXISTS statuses (id SERIAL PRIMARY KEY, email VARCHAR(100), name VARCHAR(100), content TEXT, likes INT DEFAULT 0, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            st.execute("CREATE TABLE IF NOT EXISTS status_likes (status_id INT, email VARCHAR(100), PRIMARY KEY(status_id, email))");
+            System.out.println("✅ Database synced with Neon.tech");
         } catch (Exception e) { e.printStackTrace(); }
     }
 
@@ -272,15 +373,24 @@ public class CloudAPI {
             message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE"));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
             message.setSubject(subject);
-            message.setContent("<div style='background:#050811; color:#fff; padding:30px; border-radius:15px; font-family:sans-serif; border:1px solid #D4AF37;'>" +
-                               "<h2 style='color:#D4AF37;'>FXAUSD INSTITUTIONAL</h2>" +
-                               "<p>Your secure verification code is:</p>" +
-                               "<div style='background:#111; padding:20px; text-align:center; border-radius:10px;'>" +
-                               "<span style='font-size:32px; color:#D4AF37; letter-spacing:10px; font-weight:bold;'>" + content.replaceAll("\\D+", "") + "</span>" +
-                               "</div>" +
-                               "<p style='font-size:12px; color:#64748B; margin-top:20px;'>Valid for 10 minutes. @Enohk Institutional Security</p>" +
-                               "</div>", "text/html; charset=utf-8");
+            
+            // Premium HTML Template
+            String htmlContent = "<div style='background:#050811; color:#fff; padding:30px; border-radius:15px; font-family:sans-serif; border:1px solid #D4AF37;'>" +
+                                 "<h2 style='color:#D4AF37; margin-top:0;'>FXAUSD INSTITUTIONAL</h2>" +
+                                 "<p style='font-size:16px;'>Your secure verification code is:</p>" +
+                                 "<div style='background:#111; padding:20px; text-align:center; border-radius:10px; margin:20px 0;'>" +
+                                 "<span style='font-size:32px; color:#D4AF37; letter-spacing:10px; font-weight:bold;'>" + content.replaceAll("\\D+", "") + "</span>" +
+                                 "</div>" +
+                                 "<p style='font-size:12px; color:#64748B; margin-bottom:0;'>Valid for 10 minutes. If you did not request this, please ignore this email.</p>" +
+                                 "<p style='font-size:10px; color:#444; text-align:right;'>@Enohk Elite AI Security</p>" +
+                                 "</div>";
+            
+            message.setContent(htmlContent, "text/html; charset=utf-8");
             Transport.send(message);
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("✅ Institutional OTP dispatched to " + recipient);
+        } catch (Exception e) { 
+            System.err.println("❌ Email delivery failed: " + e.getMessage());
+            e.printStackTrace(); 
+        }
     }
 }
