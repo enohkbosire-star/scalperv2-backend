@@ -13,4 +13,4 @@ WORKDIR /app
 COPY --from=build /app/target/app.jar app.jar
 EXPOSE 4567 8888 8891
 # Memory limits to fit Render's Free Tier
-ENTRYPOINT ["java", "-Xmx300M", "-Xms128M", "-jar", "app.jar", "server"]
+ENTRYPOINT ["java", "-Xmx300M", "-Xms128M", "-jar", "app.jar", "live"]

@@ -2609,8 +2609,8 @@ public class Fxausd {
             );
             ForexBot.BotState botState = new ForexBot.BotState(notifier);
 
-            // Check for PORT provided by Render
-            String portStr = System.getenv("PORT");
+            // Use FOREXBOT_PORT to avoid collision with CloudAPI on Render
+            String portStr = System.getenv("FOREXBOT_PORT");
             int port = (portStr != null && !portStr.isEmpty()) ? Integer.parseInt(portStr) : 8888;
 
             System.out.println("🚀 Starting ForexBot Cloud API on port " + port);
