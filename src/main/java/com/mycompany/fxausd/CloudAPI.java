@@ -93,6 +93,9 @@ public class CloudAPI {
             intel.put("bos", Fxausd.currentIntel.bos);
             intel.put("choch", Fxausd.currentIntel.choch);
             intel.put("liquidity_score", Fxausd.currentIntel.liquidityScore);
+            intel.put("imbalance_ratio", Fxausd.currentIntel.imbalanceRatio);
+            intel.put("sentiment_score", Fxausd.currentIntel.sentimentScore);
+            intel.put("quality", Fxausd.currentIntel.setupQuality);
             intel.put("market_status", !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED");
             return gson.toJson(intel);
         });
