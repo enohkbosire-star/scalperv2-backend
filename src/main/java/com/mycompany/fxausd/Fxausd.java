@@ -1548,8 +1548,8 @@ public class Fxausd {
     public static String MT5_ENDPOINT_OVERRIDE = null;
     public static String MT5_CHART_ENDPOINT_OVERRIDE = null;
     public static String MT5_SYMBOLS_ENDPOINT_OVERRIDE = null;
-    public static final String DEFAULT_MT5_BASE_ENDPOINT = "http://127.0.0.1:5001/api";
-    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5000/api";
+    public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5001/api";
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
     public static final String DEFAULT_MT5_FALLBACK_ENDPOINT = DEFAULT_MT5_FALLBACK_BASE_ENDPOINT + "/order";
     private static final java.util.Set<String> sentSignalKeys = new java.util.HashSet<>();
@@ -1783,7 +1783,7 @@ public class Fxausd {
         System.out.println("  MT5_BASE_ENDPOINT, MT5_ENDPOINT, MT5_CHART_ENDPOINT, MT5_SYMBOLS_ENDPOINT, MT5_API_KEY");
         System.out.println("  LIVE_STRATEGY_MODE, LIVE_TIMEFRAME, LIVE_CANDLES_COUNT, LIVE_HTF_TIMEFRAME, LIVE_HTF_CANDLES_COUNT");
         System.out.println("Example:");
-        System.out.println("  java -jar Fxausd.jar live --mt5-base-endpoint=http://127.0.0.1:5001/api");
+        System.out.println("  java -jar Fxausd.jar live --mt5-base-endpoint=https://fxausd-bridge.onrender.com/api");
     }
 
     private static boolean dispatchSignalToMt5Endpoint(TradeSignal signal, String endpoint) {
@@ -2465,7 +2465,7 @@ public class Fxausd {
         }
 
         if (lastException != null) {
-            System.out.println("   Tip: if your MT5 bridge is not on http://127.0.0.1:5001/api or http://127.0.0.1:5000/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or use --mt5-base-endpoint=/--mt5-chart-endpoint=.");
+            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or use --mt5-base-endpoint=/--mt5-chart-endpoint=.");
         }
         return new ArrayList<>();
     }
@@ -2508,7 +2508,7 @@ public class Fxausd {
         }
 
         if (lastException != null) {
-            System.out.println("   Tip: if your MT5 bridge is not on http://127.0.0.1:5001/api or http://127.0.0.1:5000/api, set MT5_BASE_ENDPOINT, MT5_SYMBOLS_ENDPOINT, or use --mt5-base-endpoint=/--mt5-symbols-endpoint=.");
+            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_SYMBOLS_ENDPOINT, or use --mt5-base-endpoint=/--mt5-symbols-endpoint=.");
         }
         return new ArrayList<>(POPULAR_CHART_SYMBOLS);
     }
