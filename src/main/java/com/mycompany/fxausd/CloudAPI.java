@@ -691,7 +691,7 @@ public class CloudAPI {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private static void sendEmail(String recipient, String subject, String content) throws MessagingException {
+    private static void sendEmail(String recipient, String subject, String content) throws Exception {
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
@@ -713,7 +713,11 @@ public class CloudAPI {
         // session.setDebug(true); // Uncomment this to see full SMTP handshake in logs
 
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE"));
+        try {
+            message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE"));
+        } catch (java.io.UnsupportedEncodingException e) {
+            message.setFrom(new InternetAddress(SENDER_EMAIL));
+        }
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
         message.setSubject(subject);
         
