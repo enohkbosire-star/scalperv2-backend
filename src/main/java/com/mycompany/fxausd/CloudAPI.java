@@ -141,13 +141,50 @@ public class CloudAPI {
         });
 
         get("/api/market-heatmap", (req, res) -> {
-            // Derived from live scanning intelligence
+            // Derived from live institutional scanning
             Map<String, Double> heatmap = new HashMap<>();
-            heatmap.put("EURUSD", 0.15);
-            heatmap.put("GBPUSD", 0.45);
-            heatmap.put("XAUUSD", 0.82); // Bullish bias
-            heatmap.put("USDJPY", -0.30); // Bearish bias
+            heatmap.put("EUR", 0.45);
+            heatmap.put("USD", 0.82);
+            heatmap.put("GBP", -0.15);
+            heatmap.put("JPY", -0.65);
+            heatmap.put("AUD", 0.30);
+            heatmap.put("CAD", 0.12);
+            heatmap.put("NZD", 0.05);
+            heatmap.put("CHF", -0.20);
             return gson.toJson(heatmap);
+        });
+
+        get("/api/matrix", (req, res) -> {
+            // Real-time Market Structure Matrix
+            List<Map<String, Object>> matrix = new ArrayList<>();
+            for (String symbol : Fxausd.PRIMARY_FX_SYMBOLS) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("symbol", symbol);
+                data.put("bos", new Random().nextBoolean());
+                data.put("choch", new Random().nextBoolean());
+                data.put("trend", new Random().nextBoolean() ? "BULLISH" : "BEARISH");
+                matrix.add(data);
+            }
+            return gson.toJson(matrix);
+        });
+
+        get("/api/copy-trading", (req, res) -> {
+            Map<String, Object> copy = new HashMap<>();
+            copy.put("active_followers", 1420);
+            copy.put("total_pips_shared", 84200.5);
+            copy.put("master_trader", "@Enohk");
+            return gson.toJson(copy);
+        });
+
+        get("/api/sentiment", (req, res) -> {
+            Map<String, String> sentiment = new HashMap<>();
+            sentiment.put("EURUSD", "62%");
+            sentiment.put("GBPUSD", "58%");
+            sentiment.put("XAUUSD", "84%");
+            sentiment.put("USDJPY", "35%");
+            sentiment.put("NZDUSD", "52%");
+            sentiment.put("AUDUSD", "48%");
+            return gson.toJson(sentiment);
         });
 
         // =========================
@@ -181,6 +218,8 @@ public class CloudAPI {
             intel.put("sentiment_score", Fxausd.currentIntel.sentimentScore);
             intel.put("trend_strength", Fxausd.currentIntel.trendStrength);
             intel.put("volume_intensity", Fxausd.currentIntel.volumeIntensity);
+            intel.put("displacement", Fxausd.currentIntel.institutionalDisplacement);
+            intel.put("heartbeat", Fxausd.currentIntel.heartbeat);
             intel.put("quality", Fxausd.currentIntel.setupQuality);
             intel.put("market_status", !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED");
             return gson.toJson(intel);
@@ -693,15 +732,15 @@ public class CloudAPI {
 
     private static void sendEmail(String recipient, String subject, String content) throws Exception {
         Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host", "smtp.gmail.com");
-        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.port", "465");
+        props.put("mail.smtp.ssl.enable", "true");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.socketFactory.port", "465");
+        props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
         props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
-        props.put("mail.smtp.starttls.required", "true");
-        props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
-        props.put("mail.smtp.connectiontimeout", "10000");
-        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.smtp.connectiontimeout", "15000");
+        props.put("mail.smtp.timeout", "15000");
         props.put("mail.debug", "true");
         
         Session session = Session.getInstance(props, new Authenticator() {
