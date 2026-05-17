@@ -14,8 +14,17 @@ public class AdaptiveRiskManager {
     public static final double DRAWDOWN_PAUSE_THRESHOLD = 0.05;
 
     public double determineRiskPercent(List<TradeRecord> history) {
+        double baseRisk = NEUTRAL_MODE_PERCENT;
+        
+        // World Class Adjustment: Market Heartbeat Awareness
+        if (Fxausd.currentIntel.institutionalDisplacement > 1.2) {
+            baseRisk = WINNING_MODE_PERCENT; // Aggressive on clear institutional moves
+        } else if (Fxausd.currentIntel.institutionalDisplacement < 0.4) {
+            baseRisk = LOSING_MODE_PERCENT; // Conservative on low liquidity
+        }
+
         if (history == null || history.isEmpty()) {
-            return NEUTRAL_MODE_PERCENT;
+            return baseRisk;
         }
 
         int wins = 0;

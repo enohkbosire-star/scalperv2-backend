@@ -78,6 +78,9 @@ public class Fxausd {
         public double dominanceIndex = 1.0;
         public double trendStrength = 0.0;
         public double volumeIntensity = 0.0;
+        public double institutionalDisplacement = 0.0;
+        public double institutionalPressure = 0.0;
+        public String heartbeat = "NORMAL";
     }
     
     public static MarketIntelligence currentIntel = new MarketIntelligence();
@@ -1032,6 +1035,12 @@ public class Fxausd {
                 }
 
                 System.out.println("\n🌐 [SCAN] Starting market scan at " + LocalDateTime.now());
+
+                if (isHighImpactNewsWindow()) {
+                    System.out.println("⚠️ HIGH IMPACT NEWS DETECTED. Pausing scans for capital preservation...");
+                    Thread.sleep(60000 * 15);
+                    continue;
+                }
 
                 String liveStrategy = getArgValue(args, LIVE_STRATEGY_ARG_PREFIX);
                 if (liveStrategy == null || liveStrategy.isEmpty()) {
@@ -3210,6 +3219,13 @@ public class Fxausd {
     // ===============================
     // INSTITUTIONAL INTELLIGENCE ENGINE (BOS, CHoCH, LIQUIDITY)
     // ===============================
+    public static double calculateInstitutionalDisplacement(java.util.List<Candle> data, int index) {
+        if (index < 5) return 0.0;
+        double atr = calculateATR(data, index, 14);
+        double bodySize = Math.abs(data.get(index).close - data.get(index).open);
+        return bodySize / Math.max(0.0001, atr);
+    }
+
     public static int detectBOS(java.util.List<Candle> data, int index) {
         if (index < 50) return 0;
         double currentHigh = data.get(index).high;
@@ -3322,6 +3338,9 @@ public class Fxausd {
         currentIntel.volatility = (adx / candles.get(last).close) * 100;
         currentIntel.trendStrength = Math.abs(calculateTrendSlope(candles, last, 20)) * 1000;
         currentIntel.volumeIntensity = candles.get(last).volume / Math.max(1, calculateAverageVolume(candles, last, 20));
+        currentIntel.institutionalDisplacement = calculateInstitutionalDisplacement(candles, last);
+        currentIntel.institutionalPressure = calculateOrderFlowIntensity(candles, last) * 100;
+        currentIntel.heartbeat = currentIntel.institutionalDisplacement > 1.2 ? "HIGH_VOLATILITY" : "STABLE";
         
         if (bos == 1 || choch == 1) currentIntel.bias = "INSTITUTIONAL BULLISH";
         else if (bos == -1 || choch == -1) currentIntel.bias = "INSTITUTIONAL BEARISH";
