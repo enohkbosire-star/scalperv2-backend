@@ -39,17 +39,12 @@ public class ForexBot {
     public static boolean isForexMarketClosed() {
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         DayOfWeek dow = nowUtc.getDayOfWeek();
-        LocalTime time = nowUtc.toLocalTime();
+        int hour = nowUtc.getHour();
 
-        if (dow == DayOfWeek.SATURDAY) {
-            return true;
-        }
-        if (dow == DayOfWeek.SUNDAY && time.isBefore(LocalTime.of(22, 0))) {
-            return true;
-        }
-        if (dow == DayOfWeek.FRIDAY && time.isAfter(LocalTime.of(21, 0))) {
-            return true;
-        }
+        // Forex Market standard: Sunday 21:00 UTC to Friday 21:00 UTC
+        if (dow == DayOfWeek.FRIDAY && hour >= 21) return true;
+        if (dow == DayOfWeek.SATURDAY) return true;
+        if (dow == DayOfWeek.SUNDAY && hour < 21) return true;
         return false;
     }
 
