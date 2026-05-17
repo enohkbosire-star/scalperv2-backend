@@ -1057,6 +1057,9 @@ public class Fxausd {
                     liveSignals.sort((a, b) -> Double.compare(b.signalStrength, a.signalStrength));
                     java.util.List<TradeSignal> topSignals = selectTopUniqueSymbolSignals(liveSignals, MAX_LIVE_SIGNALS);
                     
+                    recentLiveSignals.clear();
+                    recentLiveSignals.addAll(topSignals);
+                    
                     CloudAPI.updateBotStatus("SIGNAL_FOUND", "A+ Setup detected on " + topSignals.get(0).symbol + ". Dispatching to mobile...");
 
                     if (confirmLiveExecution(topSignals)) {
@@ -1553,9 +1556,9 @@ public class Fxausd {
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
     public static final String DEFAULT_MT5_FALLBACK_ENDPOINT = DEFAULT_MT5_FALLBACK_BASE_ENDPOINT + "/order";
     private static final java.util.Set<String> sentSignalKeys = new java.util.HashSet<>();
-    private static final java.util.List<TradeSignal> recentLiveSignals = Collections.synchronizedList(new ArrayList<>());
-    private static final java.util.List<TradeRecord> recentTradeRecords = Collections.synchronizedList(new ArrayList<>());
-    private static final TradeDatabase tradeDatabase = new TradeDatabase();
+    public static final java.util.List<TradeSignal> recentLiveSignals = Collections.synchronizedList(new ArrayList<>());
+    public static final java.util.List<TradeRecord> recentTradeRecords = Collections.synchronizedList(new ArrayList<>());
+    public static final TradeDatabase tradeDatabase = new TradeDatabase();
     private static HttpServer dashboardServer = null;
 
     private static String escapeJson(String input) {
