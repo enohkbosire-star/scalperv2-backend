@@ -10,7 +10,7 @@ public class MobileSignalBridge {
     // Updated to use the cloud Render URL
     private static final String API_URL = "https://fxausd.onrender.com/signals/add";
 
-    public static void sendToMobile(String pair, String action, double entry, double tp, double sl, double confidence, double strength) {
+    public static void sendToMobile(String pair, String action, double entry, double tp, double sl, double confidence, double strength, String reason, double riskReward, String session, String type) {
         new Thread(() -> {
             try {
                 URL url = new URL(API_URL);
@@ -22,8 +22,12 @@ public class MobileSignalBridge {
                 conn.setDoOutput(true);
 
                 String json = String.format(
-                    "{\"pair\": \"%s\", \"action\": \"%s\", \"entry\": %f, \"tp\": %f, \"sl\": %f, \"confidence\": %f, \"strength\": %f}",
-                    pair, action, entry, tp, sl, confidence, strength
+                    "{\"pair\": \"%s\", \"action\": \"%s\", \"entry\": %f, \"tp\": %f, \"sl\": %f, \"confidence\": %f, \"strength\": %f, \"reason\": \"%s\", \"risk_reward\": %f, \"session\": \"%s\", \"type\": \"%s\"}",
+                    pair, action, entry, tp, sl, confidence, strength, 
+                    reason != null ? reason.replace("\"", "\\\"") : "", 
+                    riskReward, 
+                    session != null ? session : "", 
+                    type != null ? type : "INSTITUTIONAL"
                 );
 
                 try (OutputStream os = conn.getOutputStream()) {

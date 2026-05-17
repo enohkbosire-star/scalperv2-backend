@@ -76,6 +76,8 @@ public class Fxausd {
         public double imbalanceRatio = 0.0;
         public double sentimentScore = 0.5; 
         public double dominanceIndex = 1.0;
+        public double trendStrength = 0.0;
+        public double volumeIntensity = 0.0;
     }
     
     public static MarketIntelligence currentIntel = new MarketIntelligence();
@@ -979,7 +981,19 @@ public class Fxausd {
             );
 
             // Send to Mobile App
-            MobileSignalBridge.sendToMobile(testSignal.symbol, testSignal.direction, testSignal.entry, testSignal.takeProfit, testSignal.stopLoss);
+            MobileSignalBridge.sendToMobile(
+                testSignal.symbol, 
+                testSignal.direction, 
+                testSignal.entry, 
+                testSignal.takeProfit, 
+                testSignal.stopLoss,
+                testSignal.mlConfidence,
+                testSignal.signalStrength,
+                testSignal.reason,
+                testSignal.riskRewardRatio,
+                "TEST",
+                "CORE"
+            );
 
             boolean sent = sendSignalToMT5(testSignal);
             System.out.println("✅ Test signal sent to MT5: " + sent);
@@ -1104,7 +1118,19 @@ public class Fxausd {
             );
 
             // Send to Mobile App
-            MobileSignalBridge.sendToMobile(testSignal.symbol, testSignal.direction, testSignal.entry, testSignal.takeProfit, testSignal.stopLoss);
+            MobileSignalBridge.sendToMobile(
+                testSignal.symbol, 
+                testSignal.direction, 
+                testSignal.entry, 
+                testSignal.takeProfit, 
+                testSignal.stopLoss,
+                testSignal.mlConfidence,
+                testSignal.signalStrength,
+                testSignal.reason,
+                testSignal.riskRewardRatio,
+                "TEST",
+                "CORE"
+            );
 
             boolean sent = sendSignalToMT5(testSignal);
             System.out.println("✅ Test signal sent to MT5: " + sent);
@@ -1881,7 +1907,19 @@ public class Fxausd {
             System.out.println("🚀 [AI BOT] DISPATCHING SIGNAL: " + signal.symbol + " " + signal.direction);
 
             // Push to Mobile App (Cloud Ready)
-            MobileSignalBridge.sendToMobile(signal.symbol, signal.direction, signal.entry, signal.takeProfit, signal.stopLoss, signal.mlConfidence, signal.signalStrength);
+            MobileSignalBridge.sendToMobile(
+                signal.symbol, 
+                signal.direction, 
+                signal.entry, 
+                signal.takeProfit, 
+                signal.stopLoss, 
+                signal.mlConfidence, 
+                signal.signalStrength,
+                signal.reason,
+                signal.riskRewardRatio,
+                signal.session,
+                signal.setupType
+            );
 
             // Push to MT5 (Execution)
             boolean ok = sendSignalToMT5(signal);
@@ -3282,6 +3320,8 @@ public class Fxausd {
         currentIntel.imbalanceRatio = imbalance;
         currentIntel.sentimentScore = orderFlow;
         currentIntel.volatility = (adx / candles.get(last).close) * 100;
+        currentIntel.trendStrength = Math.abs(calculateTrendSlope(candles, last, 20)) * 1000;
+        currentIntel.volumeIntensity = candles.get(last).volume / Math.max(1, calculateAverageVolume(candles, last, 20));
         
         if (bos == 1 || choch == 1) currentIntel.bias = "INSTITUTIONAL BULLISH";
         else if (bos == -1 || choch == -1) currentIntel.bias = "INSTITUTIONAL BEARISH";
