@@ -179,6 +179,8 @@ public class CloudAPI {
             intel.put("liquidity_score", Fxausd.currentIntel.liquidityScore);
             intel.put("imbalance_ratio", Fxausd.currentIntel.imbalanceRatio);
             intel.put("sentiment_score", Fxausd.currentIntel.sentimentScore);
+            intel.put("trend_strength", Fxausd.currentIntel.trendStrength);
+            intel.put("volume_intensity", Fxausd.currentIntel.volumeIntensity);
             intel.put("quality", Fxausd.currentIntel.setupQuality);
             intel.put("market_status", !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED");
             return gson.toJson(intel);
@@ -201,14 +203,16 @@ public class CloudAPI {
             String otp = String.format("%06d", new Random().nextInt(999999));
             otpStorage.put(email.toLowerCase().trim(), otp);
 
-            System.out.println("📧 OTP Request for " + email + ": " + otp);
+            System.out.println("📧 [OTP SERVICE] Generated for " + email + ": " + otp);
             
             try {
                 sendEmail(email, "FXAUSD Verification Code", "Your secure verification code is: " + otp);
                 return gson.toJson(Map.of("status", "success", "message", "OTP sent successfully"));
             } catch (Exception e) {
-                e.printStackTrace();
-                return gson.toJson(Map.of("status", "error", "message", "Failed to send email"));
+                System.err.println("❌ Critical Email Error for " + email + ": " + e.getMessage());
+                // Fallback for developer: If email fails, the OTP is still in the Render logs
+                // We return error so the user knows, but the OTP is technically usable if they check logs
+                return gson.toJson(Map.of("status", "error", "message", "OTP delivery failed. Please contact support."));
             }
         });
 
@@ -216,9 +220,30 @@ public class CloudAPI {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email") != null ? data.get("email").toLowerCase().trim() : "";
             String otp = data.get("otp");
-            
+            String type = data.get("type");
+
             if (otpStorage.containsKey(email) && otpStorage.get(email).equals(otp)) {
                 otpStorage.remove(email);
+                
+                // Final Institutional logic: Create user if this is a signup verification
+                if ("signup".equalsIgnoreCase(type)) {
+                    String name = data.get("name");
+                    String phone = data.get("phone");
+                    String pass = data.get("password");
+                    
+                    try (Connection conn = connect()) {
+                        PreparedStatement ps = conn.prepareStatement("INSERT INTO users (email, name, phone, password) VALUES (?, ?, ?, ?) ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password");
+                        ps.setString(1, email);
+                        ps.setString(2, name);
+                        ps.setString(3, phone);
+                        ps.setString(4, pass);
+                        ps.executeUpdate();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return gson.toJson(Map.of("status", "fail", "message", "Account creation failed: " + e.getMessage()));
+                    }
+                }
+
                 return gson.toJson(Map.of("status", "success"));
             }
             return gson.toJson(Map.of("status", "fail", "message", "Invalid OTP"));
@@ -333,18 +358,24 @@ public class CloudAPI {
             res.type("application/json");
             List<Map<String, Object>> signals = new ArrayList<>();
             try (Connection conn = connect()) {
-                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC");
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC LIMIT 50");
                 while (rs.next()) {
-                    signals.add(Map.of(
-                            "id", rs.getInt("id"),
-                            "pair", rs.getString("pair"),
-                            "action", rs.getString("action"),
-                            "entry", rs.getDouble("entry_price"),
-                            "tp", rs.getDouble("tp"),
-                            "sl", rs.getDouble("sl"),
-                            "confidence", rs.getDouble("confidence"),
-                            "strength", rs.getDouble("strength")
-                    ));
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", rs.getInt("id"));
+                    m.put("pair", rs.getString("pair"));
+                    m.put("action", rs.getString("action"));
+                    m.put("entry", rs.getDouble("entry_price"));
+                    m.put("tp", rs.getDouble("tp"));
+                    m.put("sl", rs.getDouble("sl"));
+                    m.put("confidence", rs.getDouble("confidence"));
+                    m.put("strength", rs.getDouble("strength"));
+                    m.put("reason", rs.getString("reason"));
+                    m.put("risk_reward", rs.getDouble("risk_reward"));
+                    m.put("status", rs.getString("status"));
+                    m.put("session", rs.getString("session"));
+                    m.put("type", rs.getString("type"));
+                    m.put("timestamp", rs.getTimestamp("timestamp") != null ? rs.getTimestamp("timestamp").toString() : null);
+                    signals.add(m);
                 }
             } catch (Exception e) { e.printStackTrace(); }
             return gson.toJson(signals);
@@ -355,7 +386,7 @@ public class CloudAPI {
             Map<String, Object> data = gson.fromJson(req.body(), Map.class);
             try (Connection conn = connect()) {
                 PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO signals(pair, action, entry_price, tp, sl, confidence, strength) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        "INSERT INTO signals(pair, action, entry_price, tp, sl, confidence, strength, reason, risk_reward, status, session, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 ps.setString(1, (String) data.get("pair"));
                 ps.setString(2, (String) data.get("action"));
                 ps.setDouble(3, Double.parseDouble(data.get("entry").toString()));
@@ -363,9 +394,17 @@ public class CloudAPI {
                 ps.setDouble(5, Double.parseDouble(data.get("sl").toString()));
                 ps.setDouble(6, data.containsKey("confidence") ? Double.parseDouble(data.get("confidence").toString()) : 0.0);
                 ps.setDouble(7, data.containsKey("strength") ? Double.parseDouble(data.get("strength").toString()) : 0.0);
+                ps.setString(8, (String) data.get("reason"));
+                ps.setDouble(9, data.containsKey("risk_reward") ? Double.parseDouble(data.get("risk_reward").toString()) : 0.0);
+                ps.setString(10, data.getOrDefault("status", "ACTIVE").toString());
+                ps.setString(11, (String) data.get("session"));
+                ps.setString(12, (String) data.get("type"));
                 ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
-            } catch (Exception e) { return gson.toJson(Map.of("status", "error")); }
+            } catch (Exception e) { 
+                e.printStackTrace();
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage())); 
+            }
         });
 
         // =========================
@@ -380,8 +419,13 @@ public class CloudAPI {
             otpStorage.put(email.toLowerCase().trim() + "_verify", otp);
             
             System.out.println("🆔 Identity Verification for " + phone + ": " + otp);
-            sendEmail(email, "Identity Verification Code", "Your code is: " + otp);
-            return gson.toJson(Map.of("status", "success"));
+            try {
+                sendEmail(email, "Identity Verification Code", "Your code is: " + otp);
+                return gson.toJson(Map.of("status", "success"));
+            } catch (Exception e) {
+                System.err.println("❌ Verification Email Error: " + e.getMessage());
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage()));
+            }
         });
 
         post("/verify/confirm", (req, res) -> {
@@ -635,7 +679,7 @@ public class CloudAPI {
         try (Connection conn = connect()) {
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(100) UNIQUE, name VARCHAR(100), phone VARCHAR(20), password VARCHAR(100), balance DOUBLE PRECISION DEFAULT 50, bot_balance DOUBLE PRECISION DEFAULT 0, is_admin BOOLEAN DEFAULT FALSE, is_approved BOOLEAN DEFAULT TRUE, community_status VARCHAR(20) DEFAULT 'none', profile_pic_url TEXT)");
-            st.execute("CREATE TABLE IF NOT EXISTS signals (id SERIAL PRIMARY KEY, pair VARCHAR(20), action VARCHAR(10), entry_price DOUBLE PRECISION, tp DOUBLE PRECISION, sl DOUBLE PRECISION, confidence DOUBLE PRECISION, strength DOUBLE PRECISION)");
+            st.execute("CREATE TABLE IF NOT EXISTS signals (id SERIAL PRIMARY KEY, pair VARCHAR(20), action VARCHAR(10), entry_price DOUBLE PRECISION, tp DOUBLE PRECISION, sl DOUBLE PRECISION, confidence DOUBLE PRECISION, strength DOUBLE PRECISION, reason TEXT, risk_reward DOUBLE PRECISION, status VARCHAR(20), session VARCHAR(20), type VARCHAR(20), timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, title TEXT, time VARCHAR(100), impact VARCHAR(20) DEFAULT 'Low', currency VARCHAR(10) DEFAULT 'USD', is_future BOOLEAN DEFAULT FALSE)");
             st.execute("CREATE TABLE IF NOT EXISTS feedbacks (id SERIAL PRIMARY KEY, email VARCHAR(100), feedback TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY, title VARCHAR(255), message TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
@@ -647,43 +691,47 @@ public class CloudAPI {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private static void sendEmail(String recipient, String subject, String content) {
+    private static void sendEmail(String recipient, String subject, String content) throws MessagingException {
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.smtp.port", "587");
-        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
         props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        props.put("mail.smtp.starttls.required", "true");
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+        props.put("mail.smtp.connectiontimeout", "10000");
+        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.debug", "true");
         
         Session session = Session.getInstance(props, new Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(SENDER_EMAIL, APP_PASSWORD);
             }
         });
-        try {
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE"));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
-            message.setSubject(subject);
-            
-            // Premium HTML Template
-            String htmlContent = "<div style='background:#050811; color:#fff; padding:30px; border-radius:15px; font-family:sans-serif; border:1px solid #D4AF37;'>" +
-                                 "<h2 style='color:#D4AF37; margin-top:0;'>FXAUSD INSTITUTIONAL</h2>" +
-                                 "<p style='font-size:16px;'>Your secure verification code is:</p>" +
-                                 "<div style='background:#111; padding:20px; text-align:center; border-radius:10px; margin:20px 0;'>" +
-                                 "<span style='font-size:32px; color:#D4AF37; letter-spacing:10px; font-weight:bold;'>" + content.replaceAll("\\D+", "") + "</span>" +
-                                 "</div>" +
-                                 "<p style='font-size:12px; color:#64748B; margin-bottom:0;'>Valid for 10 minutes. If you did not request this, please ignore this email.</p>" +
-                                 "<p style='font-size:10px; color:#444; text-align:right;'>@Enohk Elite AI Security</p>" +
-                                 "</div>";
-            
-            message.setContent(htmlContent, "text/html; charset=utf-8");
-            Transport.send(message);
-            System.out.println("✅ Institutional OTP dispatched to " + recipient);
-        } catch (Exception e) { 
-            System.err.println("❌ Email delivery failed: " + e.getMessage());
-            e.printStackTrace(); 
-        }
+        
+        // session.setDebug(true); // Uncomment this to see full SMTP handshake in logs
+
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(SENDER_EMAIL, "FXAUSD ELITE"));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient));
+        message.setSubject(subject);
+        
+        String cleanOtp = content.replaceAll("\\D+", "");
+        
+        // Premium HTML Template
+        String htmlContent = "<div style='background:#050811; color:#fff; padding:30px; border-radius:15px; font-family:sans-serif; border:1px solid #D4AF37;'>" +
+                             "<h2 style='color:#D4AF37; margin-top:0;'>FXAUSD INSTITUTIONAL</h2>" +
+                             "<p style='font-size:16px;'>Your secure verification code is:</p>" +
+                             "<div style='background:#111; padding:20px; text-align:center; border-radius:10px; margin:20px 0;'>" +
+                             "<span style='font-size:32px; color:#D4AF37; letter-spacing:10px; font-weight:bold;'>" + cleanOtp + "</span>" +
+                             "</div>" +
+                             "<p style='font-size:12px; color:#64748B; margin-bottom:0;'>Valid for 10 minutes. If you did not request this, please ignore this email.</p>" +
+                             "<p style='font-size:10px; color:#444; text-align:right;'>@Enohk Elite AI Security</p>" +
+                             "</div>";
+        
+        message.setContent(htmlContent, "text/html; charset=utf-8");
+        Transport.send(message);
+        System.out.println("✅ Institutional OTP dispatched to " + recipient);
     }
 }
