@@ -157,10 +157,10 @@ public class Fxausd {
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         DayOfWeek day = nowUtc.getDayOfWeek();
         int hour = nowUtc.getHour();
-        // Friday 22:00 UTC to Sunday 22:00 UTC
-        if (day == DayOfWeek.FRIDAY && hour >= 22) return true;
+        // Forex Market standard: Sunday 21:00 UTC to Friday 21:00 UTC
+        if (day == DayOfWeek.FRIDAY && hour >= 21) return true;
         if (day == DayOfWeek.SATURDAY) return true;
-        if (day == DayOfWeek.SUNDAY && hour < 22) return true;
+        if (day == DayOfWeek.SUNDAY && hour < 21) return true;
         return false;
     }
 
@@ -171,12 +171,14 @@ public class Fxausd {
         LocalTime currentTime = nowUtc.toLocalTime();
 
         if (startHour == DEFAULT_ACTIVE_SESSION_START_HOUR_UTC && endHour == DEFAULT_ACTIVE_SESSION_END_HOUR_UTC) {
+            // Standard Active Institutional Sessions (UTC)
             LocalTime londonOpen = LocalTime.of(7, 0);
-            LocalTime londonOpenEnd = LocalTime.of(12, 0);
-            LocalTime nyOverlapStart = LocalTime.of(12, 0);
-            LocalTime nyOverlapEnd = LocalTime.of(16, 0);
-            return isTimeBetween(currentTime, londonOpen, londonOpenEnd)
-                    || isTimeBetween(currentTime, nyOverlapStart, nyOverlapEnd);
+            LocalTime londonClose = LocalTime.of(16, 0);
+            LocalTime nyOpen = LocalTime.of(12, 0);
+            LocalTime nyClose = LocalTime.of(21, 0);
+            
+            return isTimeBetween(currentTime, londonOpen, londonClose)
+                    || isTimeBetween(currentTime, nyOpen, nyClose);
         }
 
         LocalTime startTime = LocalTime.of(startHour, 0);
