@@ -161,8 +161,20 @@ public class ForexBot {
         }
         
         public void sendSignalAlert(BotSignal signal) {
-            // Push to Mobile App
-            MobileSignalBridge.sendToMobile(signal.symbol, signal.direction, signal.entry, signal.takeProfit, signal.stopLoss);
+            // Push to Mobile App (Institutional Grade)
+            MobileSignalBridge.sendToMobile(
+                signal.symbol, 
+                signal.direction, 
+                signal.entry, 
+                signal.takeProfit, 
+                signal.stopLoss,
+                signal.confidence,
+                signal.signalStrength,
+                signal.reason,
+                0.0, // RiskReward placeholder
+                "MT5_API",
+                "INSTITUTIONAL"
+            );
 
             String message = String.format(
                 "🎯 NEW SIGNAL\n" +

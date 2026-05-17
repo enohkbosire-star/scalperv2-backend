@@ -48,6 +48,10 @@ public class MobileSignalBridge {
     }
 
     // Keep compatibility for old calls
+    public static void sendToMobile(String pair, String action, double entry, double tp, double sl, double confidence, double strength) {
+        sendToMobile(pair, action, entry, tp, sl, confidence, strength, "", 0.0, "", "INSTITUTIONAL");
+    }
+
     public static void sendToMobile(String pair, String action, double entry, double tp, double sl) {
         sendToMobile(pair, action, entry, tp, sl, 0.0, 0.0);
     }
