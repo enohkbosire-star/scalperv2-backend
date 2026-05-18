@@ -134,7 +134,16 @@ public class Fxausd {
     static final int DEFAULT_ACTIVE_SESSION_END_HOUR_UTC = 21;
     static final String LIVE_ACTIVE_SESSION_START_ENV = "LIVE_ACTIVE_SESSION_START_UTC";
     static final String LIVE_ACTIVE_SESSION_END_ENV = "LIVE_ACTIVE_SESSION_END_UTC";
-    static final java.util.List<String> PRIMARY_FX_SYMBOLS = Arrays.asList("EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NZDUSD", "AUDUSD", "USDCAD", "BTCUSD", "ETHUSD");
+    static final java.util.List<String> PRIMARY_FX_SYMBOLS = Arrays.asList(
+        // Major Forex
+        "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD", 
+        // Major Indices
+        "NAS100", "US30", "SPX500", "GER30", "UK100",
+        // Metals & Commodities
+        "XAUUSD", "XAGUSD", "USOIL", "UKOIL",
+        // Popular Crypto
+        "BTCUSD", "ETHUSD"
+    );
     static final double DEFAULT_ACCOUNT_BALANCE = 10000.0;
 
     private static java.util.List<TradeSignal> selectTopUniqueSymbolSignals(java.util.List<TradeSignal> signals, int maxSignals) {
@@ -2467,11 +2476,25 @@ public class Fxausd {
     );
 
     public static List<Candle> fetchMarketCandles(String symbol, int count, String timeframe) {
+        // Toggle: Use Cloud Data if TWELVE_DATA_API_KEY is set
+        String cloudKey = System.getenv("TWELVE_DATA_API_KEY");
+        if (cloudKey != null && !cloudKey.isBlank()) {
+            return fetchCloudCandles(symbol, count, timeframe, cloudKey);
+        }
+
         java.util.List<String> endpoints = getMt5ChartEndpoints();
+        
+        // Add full URL overrides from environment if present
+        String envChartUrl = System.getenv("MT5_CHART_URL");
+        if (envChartUrl != null && !envChartUrl.isBlank()) {
+            endpoints.add(0, envChartUrl.trim());
+        }
+
         Exception lastException = null;
         for (String endpoint : endpoints) {
             try {
-                String url = endpoint + "?symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8.name())
+                String connector = endpoint.contains("?") ? "&" : "?";
+                String url = endpoint + connector + "symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8.name())
                         + "&count=" + count + "&timeframe=" + URLEncoder.encode(timeframe, StandardCharsets.UTF_8.name());
                 System.out.println("🌐 Fetching MT5 candles URL: " + url);
 
@@ -2494,6 +2517,9 @@ public class Fxausd {
                     } catch (Exception ignored) {
                     }
                     System.out.println("❌ Candle fetch failed: HTTP " + status + " " + errorBody);
+                    if (status == 404) {
+                        System.out.println("   💡 Tip: 404 means the path is wrong. Check if your bridge expects '/api/candles' or just '/candles'.");
+                    }
                     continue;
                 }
 
@@ -2517,13 +2543,80 @@ public class Fxausd {
         }
 
         if (lastException != null) {
-            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or use --mt5-base-endpoint=/--mt5-chart-endpoint=.");
+            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or MT5_CHART_URL.");
+            if (System.getenv("PORT") != null) {
+                System.out.println("   ☁️  Running in Cloud: You likely need a tunnel (ngrok) for your local Windows MT5 bridge. Set MT5_CHART_URL to your ngrok address.");
+            }
         }
         return new ArrayList<>();
     }
 
+    public static List<Candle> fetchCloudCandles(String symbol, int count, String timeframe, String apiKey) {
+        List<Candle> list = new ArrayList<>();
+        try {
+            // Twelve Data free tier has a limit of 8 requests per minute
+            // Adding a 7.5s delay between requests to stay within limit (8 * 7.5 = 60s)
+            System.out.println("⏳ [Rate Limit] Waiting 7.5s for Twelve Data free tier...");
+            Thread.sleep(7500);
+
+            // Twelve Data uses "/" separator (e.g. EUR/USD)
+            String cloudSymbol = symbol.length() == 6 ? symbol.substring(0, 3) + "/" + symbol.substring(3) : symbol;
+            String interval = timeframe.replace("M", "min").replace("H1", "1h").toLowerCase();
+            
+            String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
+                    cloudSymbol, interval, count, apiKey);
+            
+            URL url = new URL(urlStr);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            
+            int status = conn.getResponseCode();
+            if (status != 200) {
+                try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
+                    StringBuilder errorSb = new StringBuilder();
+                    String line;
+                    while ((line = errorReader.readLine()) != null) errorSb.append(line);
+                    System.err.println("❌ Twelve Data API Error (" + status + "): " + errorSb.toString());
+                }
+                return list;
+            }
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                
+                Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
+                List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
+                
+                if (values != null) {
+                    for (Map<String, String> v : values) {
+                        list.add(0, new Candle(
+                            Double.parseDouble(v.get("open")),
+                            Double.parseDouble(v.get("high")),
+                            Double.parseDouble(v.get("low")),
+                            Double.parseDouble(v.get("close")),
+                            v.containsKey("volume") ? Double.parseDouble(v.get("volume")) : 0.0
+                        ));
+                    }
+                }
+            }
+            System.out.println("☁️ [Cloud Data] Successfully fetched " + list.size() + " candles for " + symbol);
+        } catch (Exception e) {
+            System.err.println("❌ Cloud Fetch Error: " + e.getMessage());
+        }
+        return list;
+    }
+
     public static List<String> fetchAvailableSymbols() {
         java.util.List<String> endpoints = getMt5SymbolsEndpoints();
+        
+        // Add full URL overrides from environment if present
+        String envSymbolsUrl = System.getenv("MT5_SYMBOLS_URL");
+        if (envSymbolsUrl != null && !envSymbolsUrl.isBlank()) {
+            endpoints.add(0, envSymbolsUrl.trim());
+        }
+
         Exception lastException = null;
         for (String endpoint : endpoints) {
             try {
@@ -2560,7 +2653,10 @@ public class Fxausd {
         }
 
         if (lastException != null) {
-            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_SYMBOLS_ENDPOINT, or use --mt5-base-endpoint=/--mt5-symbols-endpoint=.");
+            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_SYMBOLS_ENDPOINT, or MT5_SYMBOLS_URL.");
+            if (System.getenv("PORT") != null) {
+                System.out.println("   ☁️  Running in Cloud: You likely need a tunnel (ngrok) for your local Windows MT5 bridge.");
+            }
         }
         return new ArrayList<>(POPULAR_CHART_SYMBOLS);
     }
@@ -3465,6 +3561,8 @@ public class Fxausd {
 
         String mode = strategy == null ? DEFAULT_LIVE_STRATEGY_MODE : strategy.toLowerCase(Locale.ROOT).trim();
         switch (mode) {
+            case "quantum":
+                return generateEliteQuantumSignals(candles, symbol, liveTimeframe);
             case "sniper":
                 return generateSniperSignals(candles, symbol, liveTimeframe);
             case "meanreversion":
@@ -3475,7 +3573,11 @@ public class Fxausd {
                 String regime = detectMarketRegime(candles, candles.size() - 1, 50);
                 System.out.printf("▶ Live regime selection for %s on %s: %s%n", symbol, liveTimeframe, regime);
                 if ("trending".equals(regime)) {
-                    return generateBreakoutSignals(candles, symbol, liveTimeframe);
+                    // Combine SMC and Breakout for trending markets
+                    java.util.List<TradeSignal> combined = new ArrayList<>();
+                    combined.addAll(generateSMCSignals(candles, symbol, liveTimeframe));
+                    combined.addAll(generateBreakoutSignals(candles, symbol, liveTimeframe));
+                    return combined;
                 } else if ("ranging".equals(regime)) {
                     return generateMeanReversionSignals(candles, symbol, liveTimeframe);
                 }
@@ -3485,7 +3587,13 @@ public class Fxausd {
             case "smc":
                 return generateSMCSignals(candles, symbol, liveTimeframe);
             case "all":
-                return new ArrayList<>();
+                java.util.List<TradeSignal> all = new ArrayList<>();
+                all.addAll(generateEliteQuantumSignals(candles, symbol, liveTimeframe));
+                all.addAll(generateSMCSignals(candles, symbol, liveTimeframe));
+                all.addAll(generateSniperSignals(candles, symbol, liveTimeframe));
+                all.addAll(generateBreakoutSignals(candles, symbol, liveTimeframe));
+                all.addAll(generateMeanReversionSignals(candles, symbol, liveTimeframe));
+                return all;
             default:
                 return generateSMCSignals(candles, symbol, liveTimeframe);
         }
