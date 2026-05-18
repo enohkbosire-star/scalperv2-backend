@@ -1039,6 +1039,7 @@ public class Fxausd {
             System.out.println("🚀 LIVE SCANNING MODE ENABLED - Continuous Market Monitoring");
 
             while (true) {
+                cloudCache.clear(); // Clear cache at the start of each new scan cycle
                 if (ForexBot.isForexMarketClosed()) {
                     System.out.println("😴 Market is closed. Waiting for reopen...");
                     Thread.sleep(60000 * 30); // Check every 30 mins during closure
@@ -1104,8 +1105,8 @@ public class Fxausd {
                     System.out.println("⚖️ No valid signals found in this scan.");
                 }
 
-                System.out.println("💤 Scan complete. Sleeping for 5 minutes...");
-                Thread.sleep(60000 * 5); // Scan every 5 minutes
+                System.out.println("💤 Scan complete. Sleeping for 15 minutes to save API credits...");
+                Thread.sleep(60000 * 15); // Scan every 15 minutes
             }
         }
 
@@ -2551,42 +2552,67 @@ public class Fxausd {
         return new ArrayList<>();
     }
 
+    private static final Map<String, List<Candle>> cloudCache = new HashMap<>();
+
     public static List<Candle> fetchCloudCandles(String symbol, int count, String timeframe, String apiKey) {
+        String cacheKey = symbol + "_" + timeframe + "_" + count;
+        if (cloudCache.containsKey(cacheKey)) {
+            System.out.println("💎 [Cloud Cache] Reusing data for " + symbol + " " + timeframe);
+            return cloudCache.get(cacheKey);
+        }
+
         List<Candle> list = new ArrayList<>();
         try {
             // Twelve Data free tier has a limit of 8 requests per minute
-            // Adding a 7.5s delay between requests to stay within limit (8 * 7.5 = 60s)
-            System.out.println("⏳ [Rate Limit] Waiting 7.5s for Twelve Data free tier...");
-            Thread.sleep(7500);
+            // Adding a 10s delay to be safe
+            System.out.println("⏳ [Rate Limit] Waiting 10s for Twelve Data free tier...");
+            Thread.sleep(10000);
 
-            // Twelve Data uses "/" separator (e.g. EUR/USD)
-            String cloudSymbol = symbol.length() == 6 ? symbol.substring(0, 3) + "/" + symbol.substring(3) : symbol;
-            String interval = timeframe.replace("M", "min").replace("H1", "1h").toLowerCase();
-            
+            // 1. Correct Timeframe Mapping (Fixes the "min5" vs "5min" bug)
+            String interval;
+            String tf_upper = timeframe.toUpperCase();
+            if (tf_upper.startsWith("M") && !tf_upper.equals("MN1")) {
+                interval = tf_upper.substring(1) + "min";
+            } else if (tf_upper.startsWith("H")) {
+                interval = tf_upper.substring(1).isEmpty() ? "1h" : tf_upper.substring(1) + "h";
+            } else if (tf_upper.equals("D1")) {
+                interval = "1day";
+            } else {
+                interval = "5min";
+            }
+
+            // 2. Correct Symbol Mapping for Twelve Data compatibility
+            String cloudSymbol = symbol;
+            if (symbol.length() == 6 && !symbol.contains("/")) {
+                cloudSymbol = symbol.substring(0, 3) + "/" + symbol.substring(3);
+            }
+            if (symbol.equalsIgnoreCase("NAS100")) cloudSymbol = "NDX";
+            if (symbol.equalsIgnoreCase("US30")) cloudSymbol = "DJI";
+            if (symbol.equalsIgnoreCase("SPX500")) cloudSymbol = "SPX";
+            if (symbol.equalsIgnoreCase("GER30")) cloudSymbol = "GDAXI";
+            if (symbol.equalsIgnoreCase("UK100")) cloudSymbol = "FTSE";
+            if (symbol.equalsIgnoreCase("USOIL")) cloudSymbol = "WTI/USD";
+
             String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
-                    cloudSymbol, interval, count, apiKey);
+                    URLEncoder.encode(cloudSymbol, "UTF-8"), interval, count, apiKey);
             
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             
             int status = conn.getResponseCode();
-            if (status != 200) {
-                try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
-                    StringBuilder errorSb = new StringBuilder();
-                    String line;
-                    while ((line = errorReader.readLine()) != null) errorSb.append(line);
-                    System.err.println("❌ Twelve Data API Error (" + status + "): " + errorSb.toString());
-                }
-                return list;
-            }
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(status == 200 ? conn.getInputStream() : conn.getErrorStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) sb.append(line);
                 
                 Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
+                
+                if (!"ok".equals(map.get("status"))) {
+                    System.err.println("❌ Twelve Data API Error for " + symbol + " (" + cloudSymbol + "): " + map.get("message") + " [Status: " + map.get("status") + "]");
+                    return list;
+                }
                 List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
                 
                 if (values != null) {
@@ -2602,6 +2628,9 @@ public class Fxausd {
                 }
             }
             System.out.println("☁️ [Cloud Data] Successfully fetched " + list.size() + " candles for " + symbol);
+            if (!list.isEmpty()) {
+                cloudCache.put(cacheKey, list);
+            }
         } catch (Exception e) {
             System.err.println("❌ Cloud Fetch Error: " + e.getMessage());
         }
