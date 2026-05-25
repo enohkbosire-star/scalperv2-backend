@@ -1,12 +1,20 @@
-# INSTITUTIONAL CLOUD DEPLOYMENT FOR FXAUSD
-FROM openjdk:21-slim
+# PROFESSIONAL INSTITUTIONAL DEPLOYMENT
+# Stage 1: Build the JAR inside Docker to ensure consistency
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Copy the built JAR from NetBeans dist folder
-# Note: Ensure you run "Clean and Build" in NetBeans
-COPY target/*.jar app.jar
+# Stage 2: Run the built JAR
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=build /app/target/Fxausd-1.0-SNAPSHOT.jar app.jar
+COPY data ./data
+COPY *.bin ./
 
-# Dynamic port assignment for cloud environments
+# Port for Spark API
 EXPOSE 4567
 
-# Run the Institutional Scalper
-ENTRYPOINT ["java", "-jar", "/app.jar", "live"]
+# Start the Automatic Scalper
+ENTRYPOINT ["java", "-Xmx512m", "-jar", "app.jar", "live"]
