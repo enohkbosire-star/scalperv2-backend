@@ -1021,92 +1021,46 @@ public class Fxausd {
             return;
         }
 
-        String liveTimeframe = System.getenv("LIVE_TIMEFRAME");
-        if (liveTimeframe == null || liveTimeframe.isEmpty()) {
-            liveTimeframe = "M5";
-        }
-        int liveCount = 220;
-        String liveCountEnv = System.getenv("LIVE_CANDLES_COUNT");
-        if (liveCountEnv != null && !liveCountEnv.isEmpty()) {
-            try {
-                liveCount = Integer.parseInt(liveCountEnv);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
-        java.util.List<Candle> candles;
+        String liveTimeframe = "M1"; // SCALPER: Use 1-minute candles
+        int liveCount = 150; 
+        
         if (liveMode) {
-            System.out.println("🚀 LIVE SCANNING MODE ENABLED - Continuous Market Monitoring");
-
+            System.out.println("🚀 [MODE] INSTITUTIONAL AUTOMATIC SCALPER ENABLED");
+            System.out.println("🎯 Targeting: XAUUSD, NAS100, US30, EURUSD");
+            
             while (true) {
-                cloudCache.clear(); // Clear cache at the start of each new scan cycle
-                if (ForexBot.isForexMarketClosed()) {
-                    System.out.println("😴 Market is closed. Waiting for reopen...");
-                    Thread.sleep(60000 * 30); // Check every 30 mins during closure
+                cloudCache.clear();
+                if (isForexMarketClosed()) {
+                    System.out.println("😴 Weekend: System idling until Sunday 22:00 UTC...");
+                    Thread.sleep(60000 * 30);
                     continue;
                 }
 
-                System.out.println("\n🌐 [SCAN] Starting market scan at " + LocalDateTime.now());
-
-                if (isHighImpactNewsWindow()) {
-                    System.out.println("⚠️ HIGH IMPACT NEWS DETECTED. Pausing scans for capital preservation...");
-                    Thread.sleep(60000 * 15);
-                    continue;
-                }
-
-                String liveStrategy = getArgValue(args, LIVE_STRATEGY_ARG_PREFIX);
-                if (liveStrategy == null || liveStrategy.isEmpty()) {
-                    liveStrategy = System.getenv(LIVE_STRATEGY_MODE_ENV);
-                }
-                if (liveStrategy == null || liveStrategy.isEmpty()) {
-                    liveStrategy = DEFAULT_LIVE_STRATEGY_MODE;
-                }
-                liveStrategy = normalizeLiveStrategyMode(liveStrategy);
-
-                java.util.List<String> liveSymbols = getLiveSymbols(args);
+                System.out.println("\n⚡ [SCALPER] Executing market pulse scan...");
+                java.util.List<String> scalpSymbols = Arrays.asList("XAUUSD", "NAS100", "US30", "EURUSD", "GBPUSD");
                 java.util.List<TradeSignal> liveSignals = new ArrayList<>();
 
                 try {
-                    for (String symbol : liveSymbols) {
-                        CloudAPI.updateBotStatus("SCANNING", "World Bank QILH Scan: " + symbol + " [Matrix Synchronization]");
+                    for (String symbol : scalpSymbols) {
+                        CloudAPI.updateBotStatus("SCALPING", "Quantum Scan: " + symbol);
                         java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
                         if (symbolCandles.isEmpty()) continue;
                         
-                        // Maximum Intelligence: QILH 90% Win Rate Strategy
+                        // Use QUANTUM institutional strategy for scalping
                         java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
                         
                         if (!eliteSignals.isEmpty()) {
-                            CloudAPI.updateBotStatus("SIGNAL_FOUND", "A+ Institutional Hunt on " + symbol + ". Executing Matrix...");
-                            sendLiveSignals(eliteSignals); 
+                            System.out.println("🔥 [AUTO-EXECUTE] A+ Scalp setup found for " + symbol);
+                            sendLiveSignals(eliteSignals); // Execution is automatic
                         }
-
                         liveSignals.addAll(eliteSignals);
-                        liveSignals.addAll(generateLiveSignalsForStrategy(symbolCandles, symbol, liveTimeframe, liveStrategy));
                     }
                 } catch (Exception e) {
-                    System.err.println("🚨 CRITICAL PRODUCTION ERROR during scan: " + e.getMessage());
-                    e.printStackTrace();
+                    System.err.println("🚨 Scalper Error: " + e.getMessage());
                 }
 
-                if (!liveSignals.isEmpty()) {
-                    liveSignals.sort((a, b) -> Double.compare(b.signalStrength, a.signalStrength));
-                    java.util.List<TradeSignal> topSignals = selectTopUniqueSymbolSignals(liveSignals, MAX_LIVE_SIGNALS);
-                    
-                    recentLiveSignals.clear();
-                    recentLiveSignals.addAll(topSignals);
-                    
-                    CloudAPI.updateBotStatus("SIGNAL_FOUND", "A+ Setup detected on " + topSignals.get(0).symbol + ". Dispatching to mobile...");
-
-                    if (confirmLiveExecution(topSignals)) {
-                        System.out.println("🎯 Dispatching " + topSignals.size() + " signals...");
-                        sendLiveSignals(topSignals);
-                    }
-                } else {
-                    System.out.println("⚖️ No valid signals found in this scan.");
-                }
-
-                System.out.println("💤 Scan complete. Sleeping for 15 minutes to save API credits...");
-                Thread.sleep(60000 * 15); // Scan every 15 minutes
+                System.out.println("💤 Pulse scan complete. Idling for 60 seconds...");
+                Thread.sleep(60000); // 1-minute polling for scalping
             }
         }
 
@@ -3538,7 +3492,7 @@ public class Fxausd {
 
         // WORLD BANK SNIPER (ULTRA LEVERAGE)
         double sniperSl = Math.max(7.0, convertPriceDiffToPips(symbol, institutionalBuy ? (price - getRecentLow(candles, last-10, last)) : (getRecentHigh(candles, last-10, last) - price)));
-        sniperSl = Math.min(sniperSl, 11.0); 
+        sniperSl = Math.min(sniperSl, 11.0);
         
         signals.add(createEliteSignal(symbol, direction, price, sniperSl, sniperSl * 6.0, mlProb, 0.98, strength, "WORLD BANK QILH SNIPER", institutionalBuy));
         
@@ -5987,5 +5941,13 @@ public class Fxausd {
         for (int i = 0; i < importances.length && i < FEATURE_NAMES.length; i++) {
             System.out.printf("   %s: %.2f%%%n", FEATURE_NAMES[i], importances[i] * 100);
         }
+    }
+
+    public static int getAssignedPort() {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        if (processBuilder.environment().get("PORT") != null) {
+            return Integer.parseInt(processBuilder.environment().get("PORT"));
+        }
+        return 4567;
     }
 }
