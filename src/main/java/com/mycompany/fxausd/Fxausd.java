@@ -144,6 +144,16 @@ public class Fxausd {
         // Popular Crypto
         "BTCUSD", "ETHUSD"
     );
+
+    private static String getBaseSymbol(String brokerSymbol) {
+        if (brokerSymbol == null) return "";
+        for (String base : PRIMARY_FX_SYMBOLS) {
+            if (brokerSymbol.toUpperCase().startsWith(base)) {
+                return base;
+            }
+        }
+        return brokerSymbol.toUpperCase();
+    }
     static final double DEFAULT_ACCOUNT_BALANCE = 10000.0;
 
     private static java.util.List<TradeSignal> selectTopUniqueSymbolSignals(java.util.List<TradeSignal> signals, int maxSignals) {
@@ -1568,10 +1578,13 @@ public class Fxausd {
         return input.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     }
 
+    public static final String JUSTMARKETS_SUFFIX = System.getenv().getOrDefault("MT5_SYMBOL_SUFFIX", ""); // e.g. ".pro" or ".m"
+
     public static String buildMt5Payload(TradeSignal signal) {
+        String symbol = (signal.symbol != null ? signal.symbol : "XAUUSD") + JUSTMARKETS_SUFFIX;
         return String.format(
                 "{\"symbol\":\"%s\",\"direction\":\"%s\",\"entry\":%.5f,\"stopLoss\":%.5f,\"takeProfit\":%.5f,\"confidence\":%.4f,\"signalStrength\":%.4f,\"reason\":\"%s\"}",
-                escapeJson(signal.symbol != null ? signal.symbol : "EURUSD"), escapeJson(signal.direction), signal.entry,
+                escapeJson(symbol), escapeJson(signal.direction), signal.entry,
                 signal.stopLoss, signal.takeProfit, signal.mlConfidence,
                 signal.signalStrength, escapeJson(signal.reason)
         );
@@ -3488,8 +3501,13 @@ public class Fxausd {
         boolean exhaustion = detectExhaustionDivergence(candles, last, structure == 1);
         
         // --- 6. THE 90% WIN RATE MATRIX (THE CONFLUENCE) ---
-        boolean institutionalBuy = h4.trend.equals("UP") && h1.trend.equals("UP") && (choch == 1 || bos == 1) && sweep && price > vwap && orderFlow > 0.75 && !exhaustion;
-        boolean institutionalSell = h4.trend.equals("DOWN") && h1.trend.equals("DOWN") && (choch == -1 || bos == -1) && sweep && price < vwap && orderFlow < 0.25 && !exhaustion;
+        // Optimization: H4 Trending + H1 Reversal Trigger (QILH Logic)
+        // We relax the H1 trend requirement to catch reversals early during liquidity hunts
+        boolean h1ReversalBuy = (choch == 1 || bos == 1);
+        boolean h1ReversalSell = (choch == -1 || bos == -1);
+        
+        boolean institutionalBuy = h4.trend.equals("UP") && h1ReversalBuy && sweep && price > vwap && orderFlow > 0.70 && !exhaustion;
+        boolean institutionalSell = h4.trend.equals("DOWN") && h1ReversalSell && sweep && price < vwap && orderFlow < 0.30 && !exhaustion;
         
         if (!institutionalBuy && !institutionalSell) return signals;
 

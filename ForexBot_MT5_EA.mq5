@@ -1,169 +1,75 @@
 //+------------------------------------------------------------------+
-//| ForexBot MT5 Expert Advisor                                      |
-//| Sends trading signals to Java ForexBot API Server                |
+//| ForexBot MT5 Expert Advisor - Quantum QILH                      |
 //+------------------------------------------------------------------+
-
 #property strict
 
 // Bot Configuration
-input string BotServerIP = "localhost";
-input int BotServerPort = 8888;
+input string BotServerIP = "192.168.100.37"; // YOUR LOCAL IP
+input int BotServerPort = 4567;
 input string BotAPIKey = "forex_bot_secret_key_12345";
-input string SymbolToTrade = "EURUSD";
-input int SignalUpdateInterval = 60; // seconds
+input string SymbolToTrade = ""; // Blank for current chart
+input int SignalUpdateInterval = 60; 
 
-// Indicator parameters
-input int RSIPeriod = 14;
-input int MA20Period = 20;
-input int MA50Period = 50;
-input int ATRPeriod = 14;
-input int BollingerPeriod = 20;
+// Quantum Parameters
+input ENUM_TIMEFRAMES TrendTimeframe = PERIOD_H4;
+input ENUM_TIMEFRAMES TriggerTimeframe = PERIOD_H1;
 
 // Global variables
 datetime lastSignalTime = 0;
-double lastSignalEntry = 0.0;
+string ActiveSymbol = "";
 
-//+------------------------------------------------------------------+
-//| Expert initialization                                             |
-//+------------------------------------------------------------------+
-int OnInit()
-{
-    Print("ForexBot MT5 Advisor initialized for " + SymbolToTrade);
+int OnInit() {
+    ActiveSymbol = (SymbolToTrade == "") ? _Symbol : SymbolToTrade;
+    Print("🚀 Quantum QILH initialized for " + ActiveSymbol);
     return(INIT_SUCCEEDED);
 }
 
-//+------------------------------------------------------------------+
-//| Expert tick function                                               |
-//+------------------------------------------------------------------+
-void OnTick()
-{
-    if(TimeCurrent() - lastSignalTime < SignalUpdateInterval)
-        return;
+void OnTick() {
+    if(TimeCurrent() - lastSignalTime < SignalUpdateInterval) return;
 
-    int rsiHandle = iRSI(SymbolToTrade, PERIOD_H1, RSIPeriod, PRICE_CLOSE);
-    int ma20Handle = iMA(SymbolToTrade, PERIOD_H1, MA20Period, 0, MODE_SMA, PRICE_CLOSE);
-    int ma50Handle = iMA(SymbolToTrade, PERIOD_H1, MA50Period, 0, MODE_SMA, PRICE_CLOSE);
-    int atrHandle = iATR(SymbolToTrade, PERIOD_H1, ATRPeriod);
-    int bbHandle = iBands(SymbolToTrade, PERIOD_H1, BollingerPeriod, 2, 0, PRICE_CLOSE);
+    // 1. Quantum Trend (H4)
+    double h4_ema200 = iMA(ActiveSymbol, TrendTimeframe, 200, 0, MODE_EMA, PRICE_CLOSE);
+    double h4_close = iClose(ActiveSymbol, TrendTimeframe, 0);
+    bool isUptrend = (h4_close > h4_ema200);
+    bool isDowntrend = (h4_close < h4_ema200);
 
-    if(rsiHandle == INVALID_HANDLE || ma20Handle == INVALID_HANDLE || ma50Handle == INVALID_HANDLE || atrHandle == INVALID_HANDLE || bbHandle == INVALID_HANDLE)
-    {
-        Print("❌ Failed to create indicator handles for MT5.");
-        return;
-    }
-
-    double rsiBuffer[1];
-    double ma20Buffer[1];
-    double ma50Buffer[1];
-    double atrBuffer[1];
-    double bbUpperBuffer[1];
-    double bbLowerBuffer[1];
-
-    if(CopyBuffer(rsiHandle, 0, 0, 1, rsiBuffer) <= 0 ||
-       CopyBuffer(ma20Handle, 0, 0, 1, ma20Buffer) <= 0 ||
-       CopyBuffer(ma50Handle, 0, 0, 1, ma50Buffer) <= 0 ||
-       CopyBuffer(atrHandle, 0, 0, 1, atrBuffer) <= 0 ||
-       CopyBuffer(bbHandle, 0, 0, 1, bbUpperBuffer) <= 0 ||
-       CopyBuffer(bbHandle, 2, 0, 1, bbLowerBuffer) <= 0)
-    {
-        Print("❌ Failed to retrieve MT5 indicator values.");
-        return;
-    }
-
-    double rsi = rsiBuffer[0];
-    double ma20 = ma20Buffer[0];
-    double ma50 = ma50Buffer[0];
-    double atr = atrBuffer[0];
-    double bbUpper = bbUpperBuffer[0];
-    double bbLower = bbLowerBuffer[0];
-    double closePrice = SymbolInfoDouble(SymbolToTrade, SYMBOL_BID);
-    double askPrice = SymbolInfoDouble(SymbolToTrade, SYMBOL_ASK);
-
+    // 2. Trigger (H1)
+    double h1_rsi = iRSI(ActiveSymbol, TriggerTimeframe, 14, PRICE_CLOSE);
+    
     string direction = "NONE";
-    string reason = "";
-    double confidence = 0.0;
+    if(isUptrend && h1_rsi < 35) direction = "BUY";
+    if(isDowntrend && h1_rsi > 65) direction = "SELL";
 
-    if(rsi < 30 && ma20 > ma50 && closePrice > bbLower)
-    {
-        direction = "BUY";
-        reason = "Oversold RSI + Bullish MA Cross + Above Lower BB";
-        confidence = 0.75;
-    }
-    else if(rsi > 70 && ma20 < ma50 && closePrice < bbUpper)
-    {
-        direction = "SELL";
-        reason = "Overbought RSI + Bearish MA Cross + Below Upper BB";
-        confidence = 0.72;
-    }
+    if(direction != "NONE") {
+        double entry = (direction == "BUY") ? SymbolInfoDouble(ActiveSymbol, SYMBOL_ASK) : SymbolInfoDouble(ActiveSymbol, SYMBOL_BID);
+        
+        // Correct ATR Calculation for MT5
+        int atrHandle = iATR(ActiveSymbol, TriggerTimeframe, 14);
+        double atrBuffer[1];
+        CopyBuffer(atrHandle, 0, 0, 1, atrBuffer);
+        double atrValue = atrBuffer[0];
+        IndicatorRelease(atrHandle);
 
-    if(direction != "NONE")
-    {
-        double entry = askPrice;
-        double stopLoss, takeProfit;
+        double sl = (direction == "BUY") ? entry - 2.0 * atrValue : entry + 2.0 * atrValue;
+        double tp = (direction == "BUY") ? entry + 4.0 * atrValue : entry - 4.0 * atrValue;
 
-        if(direction == "BUY")
-        {
-            stopLoss = entry - 1.5 * atr;
-            takeProfit = entry + 3.0 * atr;
-        }
-        else
-        {
-            stopLoss = entry + 1.5 * atr;
-            takeProfit = entry - 3.0 * atr;
-        }
-
-        SendSignalToBot(direction, entry, stopLoss, takeProfit, confidence, reason);
+        SendSignalToBot(direction, entry, sl, tp, 0.90, "Quantum QILH Setup");
         lastSignalTime = TimeCurrent();
-        lastSignalEntry = entry;
     }
-
-    IndicatorRelease(rsiHandle);
-    IndicatorRelease(ma20Handle);
-    IndicatorRelease(ma50Handle);
-    IndicatorRelease(atrHandle);
-    IndicatorRelease(bbHandle);
 }
 
-//+------------------------------------------------------------------+
-//| Send signal to ForexBot Java API                                  |
-//+------------------------------------------------------------------+
-void SendSignalToBot(string direction, double entry, double sl, double tp, double confidence, string reason)
-{
-    string json = "{\"symbol\":\"" + SymbolToTrade + "\"," +
-                  "\"direction\":\"" + direction + "\"," +
-                  "\"entry\":" + DoubleToString(entry, 5) + "," +
-                  "\"stopLoss\":" + DoubleToString(sl, 5) + "," +
-                  "\"takeProfit\":" + DoubleToString(tp, 5) + "," +
-                  "\"confidence\":" + DoubleToString(confidence, 2) + "," +
-                  "\"signalStrength\":0.85," +
-                  "\"reason\":\"" + reason + "\"}";
+void SendSignalToBot(string direction, double entry, double sl, double tp, double confidence, string reason) {
+    string json = "{\"pair\":\"" + ActiveSymbol + "\",\"action\":\"" + direction + "\",\"entry\":" + DoubleToString(entry, 5) + 
+                  ",\"sl\":" + DoubleToString(sl, 5) + ",\"tp\":" + DoubleToString(tp, 5) + ",\"confidence\":" + DoubleToString(confidence, 2) + 
+                  ",\"strength\":0.90,\"reason\":\"" + reason + "\"}";
 
     char postData[];
     StringToCharArray(json, postData, 0, WHOLE_ARRAY);
-
-    string headers = "Authorization: Bearer " + BotAPIKey + "\r\n" +
-                     "Content-Type: application/json\r\n";
-    string url = "http://" + BotServerIP + ":" + IntegerToString(BotServerPort) + "/api/signal";
+    string headers = "Authorization: Bearer " + BotAPIKey + "\r\nContent-Type: application/json\r\n";
+    string url = "http://" + BotServerIP + ":" + (string)BotServerPort + "/signals/add"; 
     char result[];
     string resultHeaders;
-    int timeout = 10000;
 
-    int responseCode = WebRequest("POST", url, headers, timeout, postData, result, resultHeaders);
-
-    if(responseCode == 200)
-    {
-        Print("✅ Signal sent to ForexBot: " + direction + " @ " + DoubleToString(entry, 5));
-    }
-    else
-    {
-        Print("❌ Failed to send signal. Response code: " + IntegerToString(responseCode));
-    }
-}
-
-//+------------------------------------------------------------------+
-//| Expert deinitialization                                           |
-//+------------------------------------------------------------------+
-void OnDeinit(const int reason)
-{
-    Print("ForexBot MT5 Advisor deinitialized");
-}
+    WebRequest("POST", url, headers, 10000, postData, result, resultHeaders);
+    Print("✅ Signal Sent: " + direction + " " + ActiveSymbol);
+}                   
