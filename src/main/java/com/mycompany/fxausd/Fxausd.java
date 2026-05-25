@@ -1064,6 +1064,7 @@ public class Fxausd {
             }
         }
 
+        java.util.List<Candle> candles;
         candles = loadData("data/eurusd.csv");
         System.out.println("✅ Loaded candles: " + candles.size());
 
