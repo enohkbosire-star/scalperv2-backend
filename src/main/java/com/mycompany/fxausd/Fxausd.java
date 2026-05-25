@@ -1037,7 +1037,8 @@ public class Fxausd {
                 }
 
                 System.out.println("\n⚡ [SCALPER] Executing market pulse scan...");
-                java.util.List<String> scalpSymbols = Arrays.asList("XAUUSD", "NAS100", "US30", "EURUSD", "GBPUSD");
+                // Filter symbols to those available on free tiers
+                java.util.List<String> scalpSymbols = Arrays.asList("XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD");
                 java.util.List<TradeSignal> liveSignals = new ArrayList<>();
 
                 try {
@@ -2508,9 +2509,16 @@ public class Fxausd {
     }
 
     private static final Map<String, List<Candle>> cloudCache = new HashMap<>();
+    private static final Set<String> premiumSymbols = new HashSet<>();
 
     public static List<Candle> fetchCloudCandles(String symbol, int count, String timeframe, String apiKey) {
         String cacheKey = symbol + "_" + timeframe + "_" + count;
+        
+        if (premiumSymbols.contains(symbol)) {
+            System.out.println("⏩ [Skip] " + symbol + " requires a paid Twelve Data plan. Skipping...");
+            return new ArrayList<>();
+        }
+
         if (cloudCache.containsKey(cacheKey)) {
             System.out.println("💎 [Cloud Cache] Reusing data for " + symbol + " " + timeframe);
             return cloudCache.get(cacheKey);
@@ -2518,12 +2526,12 @@ public class Fxausd {
 
         List<Candle> list = new ArrayList<>();
         try {
-            // Twelve Data free tier has a limit of 8 requests per minute
-            // Adding a 10s delay to be safe
-            System.out.println("⏳ [Rate Limit] Waiting 10s for Twelve Data free tier...");
-            Thread.sleep(10000);
+            // Twelve Data free tier allows 8 requests per minute.
+            // We sleep 8s between requests to stay safe (60/8 = 7.5s).
+            System.out.println("⏳ [Rate Limit] Respecting Twelve Data 8-req/min limit...");
+            Thread.sleep(8500);
 
-            // 1. Correct Timeframe Mapping (Fixes the "min5" vs "5min" bug)
+            // 1. Correct Timeframe Mapping
             String interval;
             String tf_upper = timeframe.toUpperCase();
             if (tf_upper.startsWith("M") && !tf_upper.equals("MN1")) {
@@ -2536,17 +2544,11 @@ public class Fxausd {
                 interval = "5min";
             }
 
-            // 2. Correct Symbol Mapping for Twelve Data compatibility
+            // 2. Correct Symbol Mapping
             String cloudSymbol = symbol;
             if (symbol.length() == 6 && !symbol.contains("/")) {
                 cloudSymbol = symbol.substring(0, 3) + "/" + symbol.substring(3);
             }
-            if (symbol.equalsIgnoreCase("NAS100")) cloudSymbol = "NDX";
-            if (symbol.equalsIgnoreCase("US30")) cloudSymbol = "DJI";
-            if (symbol.equalsIgnoreCase("SPX500")) cloudSymbol = "SPX";
-            if (symbol.equalsIgnoreCase("GER30")) cloudSymbol = "GDAXI";
-            if (symbol.equalsIgnoreCase("UK100")) cloudSymbol = "FTSE";
-            if (symbol.equalsIgnoreCase("USOIL")) cloudSymbol = "WTI/USD";
 
             String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
                     URLEncoder.encode(cloudSymbol, "UTF-8"), interval, count, apiKey);
@@ -2565,7 +2567,12 @@ public class Fxausd {
                 Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
                 
                 if (!"ok".equals(map.get("status"))) {
-                    System.err.println("❌ Twelve Data API Error for " + symbol + " (" + cloudSymbol + "): " + map.get("message") + " [Status: " + map.get("status") + "]");
+                    String msg = (String) map.get("message");
+                    System.err.println("❌ Twelve Data API Error for " + symbol + ": " + msg);
+                    
+                    if (msg != null && (msg.contains("plan") || msg.contains("Grow") || msg.contains("Venture"))) {
+                        premiumSymbols.add(symbol);
+                    }
                     return list;
                 }
                 List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
