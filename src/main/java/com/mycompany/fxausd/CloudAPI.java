@@ -351,17 +351,17 @@ public class CloudAPI {
         post("/ai/chat", (req, res) -> {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String userMsg = data.get("message").toLowerCase();
-            
+
             String response;
             if (userMsg.contains("status") || userMsg.contains("market")) {
-                response = String.format("🤖 [Neural Audit] The market is currently %s. I am detecting a %s bias with a liquidity score of %.2f.", 
-                    !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED", 
-                    Fxausd.currentIntel.bias, 
+                response = String.format("🤖 [Neural Audit] The market is currently %s. I am detecting a %s bias with a liquidity score of %.2f.",
+                    !Fxausd.isForexMarketClosed() ? "OPEN" : "CLOSED",
+                    Fxausd.currentIntel.bias,
                     Fxausd.currentIntel.liquidityScore);
             } else if (userMsg.contains("gold") || userMsg.contains("xauusd")) {
                 response = "⚡ [Asset Intel] XAUUSD is exhibiting institutional accumulation zones. Our Quantum model identifies potential long liquidity at 2035.";
             } else if (userMsg.contains("setup") || userMsg.contains("signal")) {
-                response = String.format("🛡️ [Risk Protocol] Current Setup Quality is %s. Current session: %s. I suggest awaiting a clean CHoCH before execution.", 
+                response = String.format("🛡️ [Risk Protocol] Current Setup Quality is %s. Current session: %s. I suggest awaiting a clean CHoCH before execution.",
                     Fxausd.currentIntel.setupQuality, Fxausd.currentIntel.session);
             } else {
                 response = "I am the FXAUSD Institutional AI. I am constantly scanning H4 and H1 fractals for A+ setups. Ask me about current 'bias', 'gold', or 'setups'.";
@@ -440,9 +440,9 @@ public class CloudAPI {
                 ps.setString(12, (String) data.get("type"));
                 ps.executeUpdate();
                 return gson.toJson(Map.of("status", "success"));
-            } catch (Exception e) { 
+            } catch (Exception e) {
                 e.printStackTrace();
-                return gson.toJson(Map.of("status", "error", "message", e.getMessage())); 
+                return gson.toJson(Map.of("status", "error", "message", e.getMessage()));
             }
         });
 
@@ -453,10 +453,10 @@ public class CloudAPI {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email");
             String phone = data.get("phone");
-            
+
             String otp = String.format("%06d", new Random().nextInt(999999));
             otpStorage.put(email.toLowerCase().trim() + "_verify", otp);
-            
+
             System.out.println("🆔 Identity Verification for " + phone + ": " + otp);
             try {
                 sendEmail(email, "Identity Verification Code", "Your code is: " + otp);
@@ -471,7 +471,7 @@ public class CloudAPI {
             Map<String, String> data = gson.fromJson(req.body(), Map.class);
             String email = data.get("email").toLowerCase().trim();
             String otp = data.get("otp");
-            
+
             if (otpStorage.containsKey(email + "_verify") && otpStorage.get(email + "_verify").equals(otp)) {
                 otpStorage.remove(email + "_verify");
                 try (Connection conn = connect()) {
@@ -528,7 +528,7 @@ public class CloudAPI {
             String email = data.get("email");
             String name = data.get("name");
             String password = data.get("password");
-            
+
             try (Connection conn = connect()) {
                 PreparedStatement ps = conn.prepareStatement("INSERT INTO users (email, name, password) VALUES (?, ?, ?)");
                 ps.setString(1, email);
