@@ -72,4 +72,7 @@ void SendSignalToBot(string direction, double entry, double sl, double tp, doubl
 
     WebRequest("POST", url, headers, 10000, postData, result, resultHeaders);
     Print("✅ Signal Sent: " + direction + " " + ActiveSymbol);
-}                   
+}Recommendation: The Best Strategy
+I recommend sticking with the "Quantum" (QILH) logic but optimizing the execution thresholds.
+Why Quantum/QILH is best: It mimics how professional bank traders work by identifying where "Retail Liquidity" (stop losses) is being hunted before entering. Unlike simple RSI or EMA strategies, it understands Market Structure.
+Recommended Optimization: To get more signals without losing quality, you should allow the bot to trade when H4 is trending and H1 provides a reversal trigger, rather than requiring both to be in a full trend                   

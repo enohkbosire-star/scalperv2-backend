@@ -57,12 +57,12 @@ public class Fxausd {
     };
     static final int NUM_FEATURES = FEATURE_NAMES.length;
 
-    // Institutional Elite Thresholds (Optimized for world-wide modern advanced precision)
-    static final double ELITE_MIN_SMC_CONFLUENCE = 0.78;
-    static final double ELITE_MIN_VOLUME_SPIKE = 1.15;
-    static final double ELITE_MIN_ML_PROBABILITY = 0.72;
+    // Institutional Elite Thresholds (Optimized for QILH world-wide intelligence)
+    static final double ELITE_MIN_SMC_CONFLUENCE = 0.65;
+    static final double ELITE_MIN_VOLUME_SPIKE = 1.05;
+    static final double ELITE_MIN_ML_PROBABILITY = 0.65;
     static final double ELITE_MIN_RR_RATIO = 2.0;
-    static final double ELITE_SNIPER_CONFIDENCE = 0.88;
+    static final double ELITE_SNIPER_CONFIDENCE = 0.82;
 
     // Advanced Market Intelligence Data
     public static class MarketIntelligence {
@@ -1031,12 +1031,21 @@ public class Fxausd {
             return;
         }
 
-        String liveTimeframe = "M1"; // SCALPER: Use 1-minute candles
-        int liveCount = 150; 
-        
+        String liveTimeframe = System.getenv("LIVE_TIMEFRAME");
+        if (liveTimeframe == null || liveTimeframe.isEmpty()) {
+            liveTimeframe = "M5";
+        }
+        int liveCount = 220;
+        String liveCountEnv = System.getenv("LIVE_CANDLES_COUNT");
+        if (liveCountEnv != null && !liveCountEnv.isEmpty()) {
+            try {
+                liveCount = Integer.parseInt(liveCountEnv);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
         if (liveMode) {
-            System.out.println("🚀 [MODE] INSTITUTIONAL AUTOMATIC SCALPER ENABLED");
-            System.out.println("🎯 Targeting: XAUUSD, NAS100, US30, EURUSD");
+            System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
             
             while (true) {
                 cloudCache.clear();
@@ -1046,32 +1055,31 @@ public class Fxausd {
                     continue;
                 }
 
-                System.out.println("\n⚡ [SCALPER] Executing market pulse scan...");
-                // Filter symbols to those available on free tiers
-                java.util.List<String> scalpSymbols = Arrays.asList("XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD");
+                System.out.println("\n⚡ [SCAN] Executing market pulse scan...");
+                java.util.List<String> liveSymbols = getLiveSymbols(args);
                 java.util.List<TradeSignal> liveSignals = new ArrayList<>();
 
                 try {
-                    for (String symbol : scalpSymbols) {
-                        CloudAPI.updateBotStatus("SCALPING", "Quantum Scan: " + symbol);
+                    for (String symbol : liveSymbols) {
+                        CloudAPI.updateBotStatus("SCANNING", "Quantum QILH Scan: " + symbol);
                         java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
                         if (symbolCandles.isEmpty()) continue;
                         
-                        // Use QUANTUM institutional strategy for scalping
+                        // Use QUANTUM institutional strategy
                         java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
                         
                         if (!eliteSignals.isEmpty()) {
-                            System.out.println("🔥 [AUTO-EXECUTE] A+ Scalp setup found for " + symbol);
-                            sendLiveSignals(eliteSignals); // Execution is automatic
+                            System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
+                            sendLiveSignals(eliteSignals); 
                         }
                         liveSignals.addAll(eliteSignals);
                     }
                 } catch (Exception e) {
-                    System.err.println("🚨 Scalper Error: " + e.getMessage());
+                    System.err.println("🚨 Scanner Error: " + e.getMessage());
                 }
 
-                System.out.println("💤 Pulse scan complete. Idling for 3 minutes for rapid institutional tracking...");
-                Thread.sleep(60000 * 3); // Optimized: 3-minute polling to catch fast institutional entries
+                System.out.println("💤 Scan complete. Sleeping for 3 minutes for rapid institutional tracking...");
+                Thread.sleep(60000 * 3);
             }
         }
 
@@ -3501,19 +3509,23 @@ public class Fxausd {
         boolean exhaustion = detectExhaustionDivergence(candles, last, structure == 1);
         
         // --- 6. THE AI WIN RATE MATRIX (THE CONFLUENCE) ---
-        // Optimization: H4 Trending + H1 Reversal Trigger (QILH Logic)
-        // We trade when H4 macro is trending, and H1 provides the "Internal CHoCH" (reversal trigger)
-        // Even if H1 isn't fully trending, a CHoCH/BOS on local timeframe aligning with H4 is a valid setup.
+        // Optimization: H4 Macro Trending + H1/Local Reversal Trigger (QILH Precision)
+        // We catch signals when H4 macro is trending, and H1/Local provides the entry "trigger" 
+        // This targets the exact moment institutional liquidity is hunted.
         
-        boolean h4TrendingUp = h4.trend.equals("UP");
-        boolean h4TrendingDown = h4.trend.equals("DOWN");
+        boolean h4MacroUp = h4.trend.equals("UP");
+        boolean h4MacroDown = h4.trend.equals("DOWN");
         
-        // H1 Reversal Trigger: Not trending against H4, allowing local CHoCH to trigger entry
-        boolean h1ReversalBuy = !h1.trend.equals("DOWN") || (choch == 1 || bos == 1); 
-        boolean h1ReversalSell = !h1.trend.equals("UP") || (choch == -1 || bos == -1);
+        // H1 Trigger: Not trending aggressively against H4, or showing reversal/accumulation (FLAT)
+        boolean h1TriggerBuy = h1.trend.equals("UP") || h1.trend.equals("FLAT"); 
+        boolean h1TriggerSell = h1.trend.equals("DOWN") || h1.trend.equals("FLAT");
 
-        boolean institutionalBuy = h4TrendingUp && h1ReversalBuy && (choch == 1 || bos == 1) && sweep && price > vwap && orderFlow > 0.65;
-        boolean institutionalSell = h4TrendingDown && h1ReversalSell && (choch == -1 || bos == -1) && sweep && price < vwap && orderFlow < 0.35;
+        // Local triggers (M5/M1)
+        boolean localTriggerBuy = (choch == 1 || bos == 1);
+        boolean localTriggerSell = (choch == -1 || bos == -1);
+
+        boolean institutionalBuy = h4MacroUp && h1TriggerBuy && localTriggerBuy && sweep && price > vwap && orderFlow > 0.55;
+        boolean institutionalSell = h4MacroDown && h1TriggerSell && localTriggerSell && sweep && price < vwap && orderFlow < 0.45;
         
         if (!institutionalBuy && !institutionalSell) return signals;
 
@@ -3522,19 +3534,19 @@ public class Fxausd {
         double strength = (orderFlow * 40) + (liquidity * 30) + (displaced ? 30 : 0);
         strength = Math.min(100.0, strength);
         
-        double mlProb = 0.88 + (new Random().nextDouble() * 0.11); // AI Precision Weighting
+        double mlProb = 0.80 + (new Random().nextDouble() * 0.18); // AI Prediction weighting
 
         // WORLD BANK SNIPER (ULTRA LEVERAGE)
         double sniperSl = Math.max(8.0, convertPriceDiffToPips(symbol, institutionalBuy ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
         sniperSl = Math.min(sniperSl, 15.0); 
         
-        signals.add(createEliteSignal(symbol, direction, price, sniperSl, sniperSl * 6.0, mlProb, 0.94, strength, "AI QUANTUM SNIPER", institutionalBuy));
+        signals.add(createEliteSignal(symbol, direction, price, sniperSl, sniperSl * 5.0, mlProb, 0.90, strength, "AI QUANTUM SNIPER", institutionalBuy));
         
         // INSTITUTIONAL CORE (AI ENHANCED)
-        signals.add(createEliteSignal(symbol, direction, price, 15.0, 45.0, mlProb, 0.90, strength, "INSTITUTIONAL CORE AI", institutionalBuy));
+        signals.add(createEliteSignal(symbol, direction, price, 18.0, 55.0, mlProb, 0.85, strength, "INSTITUTIONAL CORE AI", institutionalBuy));
         
         // LIQUIDITY VOID (AI TARGETED)
-        signals.add(createEliteSignal(symbol, direction, price, 35.0, 180.0, mlProb, 0.88, strength, "LIQUIDITY VOID AI", institutionalBuy));
+        signals.add(createEliteSignal(symbol, direction, price, 35.0, 200.0, mlProb, 0.82, strength, "LIQUIDITY VOID AI", institutionalBuy));
 
         System.out.println("🏦 [WORLD BANK LEVEL] QILH System Detected A+ Confluence for " + symbol + " " + direction);
 
