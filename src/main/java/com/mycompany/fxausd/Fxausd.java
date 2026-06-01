@@ -260,10 +260,12 @@ public class Fxausd {
         boolean emaUp = currentPrice > longEma && shortEma > longEma;
         boolean emaDown = currentPrice < longEma && shortEma < longEma;
         double htfMomentum = (shortEma - longEma) / longEma;
-        boolean momentumUp = htfMomentum > MIN_SIGNAL_MOMENTUM;
-        boolean momentumDown = htfMomentum < -MIN_SIGNAL_MOMENTUM;
-        boolean uptrend = emaUp && structure == 1 && momentumUp;
-        boolean downtrend = emaDown && structure == -1 && momentumDown;
+        boolean momentumUp = htfMomentum > (MIN_SIGNAL_MOMENTUM * 0.5); // Relaxed momentum
+        boolean momentumDown = htfMomentum < -(MIN_SIGNAL_MOMENTUM * 0.5);
+        
+        // Relaxed Trend Logic: Price above Long EMA + (Structure OR Momentum)
+        boolean uptrend = (currentPrice > longEma) && (structure == 1 || momentumUp);
+        boolean downtrend = (currentPrice < longEma) && (structure == -1 || momentumDown);
         String trend = uptrend ? "UP" : downtrend ? "DOWN" : "FLAT";
 
         System.out.printf("   📈 HTF %s check for %s: price=%.5f, EMA50=%.5f, EMA200=%.5f, structure=%d, momentum=%.4f -> %s\n",
@@ -1059,9 +1061,13 @@ public class Fxausd {
 
                 try {
                     for (String symbol : liveSymbols) {
+                        System.out.println("🔍 [Audit] Scanning " + symbol + "...");
                         CloudAPI.updateBotStatus("SCANNING", "Quantum QILH Scan: " + symbol);
                         java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
-                        if (symbolCandles.isEmpty()) continue;
+                        if (symbolCandles.isEmpty()) {
+                             System.out.println("⚠️ [Skip] " + symbol + ": Failed to fetch candles.");
+                             continue;
+                        }
                         
                         // Use QUANTUM institutional strategy
                         java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
@@ -1069,6 +1075,8 @@ public class Fxausd {
                         if (!eliteSignals.isEmpty()) {
                             System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
                             sendLiveSignals(eliteSignals); 
+                        } else {
+                            System.out.println("⏳ [Idle] " + symbol + ": No valid setup detected in current fractal.");
                         }
                         liveSignals.addAll(eliteSignals);
                     }
@@ -1214,7 +1222,7 @@ public class Fxausd {
         java.util.List<Integer> walkForwardActuals = new ArrayList<>();
         java.util.List<Double> walkForwardReturns = new ArrayList<>();
         double walkForwardNetPips = 0;
-        double spreadPips = 1.0;
+        double spreadPips = 1.5;
         double slippagePips = 0.2;
 
         RandomForestClassifier walkModel = null;
@@ -1346,7 +1354,7 @@ public class Fxausd {
         printFeatureImportances(model);
         System.out.println();
 
-        double estimatedSpreadPips = 1.0;
+        double estimatedSpreadPips = 1.2;
         double estimatedSlippagePips = 0.2;
         double executionCostPips = estimatedSpreadPips + estimatedSlippagePips;
 
@@ -2215,9 +2223,19 @@ public class Fxausd {
     }
 
     public static boolean isHighImpactNewsWindow() {
+        // 1. Check API-based News Calendar
         String apiUrl = fetchForexNewsCalendarApiUrl();
-        boolean apiNews = apiUrl != null && getActiveHighImpactNewsEventTag(apiUrl) != null;
-        return apiNews || parseBooleanEnv("HIGH_IMPACT_NEWS");
+        if (apiUrl != null && getActiveHighImpactNewsEventTag(apiUrl) != null) return true;
+
+        // 2. Check Static News Blocklist (NFP: 1st Friday 13:30 UTC)
+        ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
+        if (nowUtc.getDayOfWeek() == DayOfWeek.FRIDAY && nowUtc.getHour() == 13) {
+             // Simple logic: if it's Friday 13:xx and the day is between 1 and 7, it's likely NFP Friday
+             if (nowUtc.getDayOfMonth() <= 7) return true;
+        }
+
+        // 3. Manual override
+        return parseBooleanEnv("HIGH_IMPACT_NEWS");
     }
 
     public static String getActiveHighImpactNewsEventTag(String apiUrl) {
@@ -2567,76 +2585,92 @@ public class Fxausd {
         }
 
         List<Candle> list = new ArrayList<>();
-        try {
-            // Twelve Data free tier allows 8 requests per minute.
-            // We sleep 7.5s between requests to stay exactly on the limit (60/8 = 7.5s).
-            System.out.println("⏳ [Rate Limit] Optimizing Twelve Data 8-req/min limit...");
-            Thread.sleep(7600);
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // Twelve Data free tier allows 8 requests per minute.
+                // We sleep 7.5s between requests to stay exactly on the limit (60/8 = 7.5s).
+                // Exponential backoff on retries.
+                long waitTime = 7600 * attempt;
+                if (attempt > 1) System.out.println("⏳ [Retry] Twelve Data attempt " + attempt + " in " + waitTime + "ms...");
+                Thread.sleep(waitTime);
 
-            // 1. Correct Timeframe Mapping
-            String interval;
-            String tf_upper = timeframe.toUpperCase();
-            if (tf_upper.startsWith("M") && !tf_upper.equals("MN1")) {
-                interval = tf_upper.substring(1) + "min";
-            } else if (tf_upper.startsWith("H")) {
-                interval = tf_upper.substring(1).isEmpty() ? "1h" : tf_upper.substring(1) + "h";
-            } else if (tf_upper.equals("D1")) {
-                interval = "1day";
-            } else {
-                interval = "5min";
-            }
+                // 1. Correct Timeframe Mapping
+                String interval;
+                String tf_upper = timeframe.toUpperCase();
+                if (tf_upper.startsWith("M") && !tf_upper.equals("MN1")) {
+                    interval = tf_upper.substring(1) + "min";
+                } else if (tf_upper.startsWith("H")) {
+                    interval = tf_upper.substring(1).isEmpty() ? "1h" : tf_upper.substring(1) + "h";
+                } else if (tf_upper.equals("D1")) {
+                    interval = "1day";
+                } else {
+                    interval = "5min";
+                }
 
-            // 2. Correct Symbol Mapping
-            String cloudSymbol = symbol;
-            if (symbol.length() == 6 && !symbol.contains("/")) {
-                cloudSymbol = symbol.substring(0, 3) + "/" + symbol.substring(3);
-            }
+                // 2. Correct Symbol Mapping
+                String cloudSymbol = symbol;
+                if (symbol.length() == 6 && !symbol.contains("/")) {
+                    cloudSymbol = symbol.substring(0, 3) + "/" + symbol.substring(3);
+                }
 
-            String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
-                    URLEncoder.encode(cloudSymbol, "UTF-8"), interval, count, apiKey);
-            
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            
-            int status = conn.getResponseCode();
-            
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(status == 200 ? conn.getInputStream() : conn.getErrorStream()))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
+                        URLEncoder.encode(cloudSymbol, "UTF-8"), interval, count, apiKey);
                 
-                Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
+                URL url = new URL(urlStr);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(15000);
                 
-                if (!"ok".equals(map.get("status"))) {
-                    String msg = (String) map.get("message");
-                    System.err.println("❌ Twelve Data API Error for " + symbol + ": " + msg);
+                int status = conn.getResponseCode();
+                
+                if (status == 429) {
+                    System.out.println("⚠️ [Rate Limit] Twelve Data 429 received. Waiting longer...");
+                    Thread.sleep(15000 * attempt);
+                    continue;
+                }
+
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(status == 200 ? conn.getInputStream() : conn.getErrorStream()))) {
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) sb.append(line);
                     
-                    if (msg != null && (msg.contains("plan") || msg.contains("Grow") || msg.contains("Venture"))) {
-                        premiumSymbols.add(symbol);
+                    Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
+                    
+                    if (!"ok".equals(map.get("status"))) {
+                        String msg = (String) map.get("message");
+                        System.err.println("❌ Twelve Data API Error for " + symbol + ": " + msg);
+                        
+                        if (msg != null && (msg.contains("plan") || msg.contains("Grow") || msg.contains("Venture"))) {
+                            premiumSymbols.add(symbol);
+                        }
+                        return list;
                     }
+                    List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
+                    
+                    if (values != null) {
+                        for (Map<String, String> v : values) {
+                            list.add(0, new Candle(
+                                Double.parseDouble(v.get("open")),
+                                Double.parseDouble(v.get("high")),
+                                Double.parseDouble(v.get("low")),
+                                Double.parseDouble(v.get("close")),
+                                v.containsKey("volume") ? Double.parseDouble(v.get("volume")) : 0.0
+                            ));
+                        }
+                    }
+                }
+                
+                if (!list.isEmpty()) {
+                    System.out.println("☁️ [Cloud Data] Successfully fetched " + list.size() + " candles for " + symbol);
+                    cloudCache.put(cacheKey, list);
                     return list;
                 }
-                List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
-                
-                if (values != null) {
-                    for (Map<String, String> v : values) {
-                        list.add(0, new Candle(
-                            Double.parseDouble(v.get("open")),
-                            Double.parseDouble(v.get("high")),
-                            Double.parseDouble(v.get("low")),
-                            Double.parseDouble(v.get("close")),
-                            v.containsKey("volume") ? Double.parseDouble(v.get("volume")) : 0.0
-                        ));
-                    }
-                }
+            } catch (Exception e) {
+                System.err.println("❌ Twelve Data fetch error (Attempt " + attempt + "): " + e.getMessage());
+                if (attempt == maxRetries) break;
             }
-            System.out.println("☁️ [Cloud Data] Successfully fetched " + list.size() + " candles for " + symbol);
-            if (!list.isEmpty()) {
-                cloudCache.put(cacheKey, list);
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Cloud Fetch Error: " + e.getMessage());
         }
         return list;
     }
@@ -3512,17 +3546,23 @@ public class Fxausd {
         double price = current.close;
         double atr = calculateATR(candles, last, 14);
         
-        // --- 3. SPREAD FILTER ---
+        // --- 3. SPREAD FILTER (DYNAMIC) ---
         double currentSpread = getCurrentSpreadPips();
-        if (currentSpread > atr * 0.15) {
-             System.out.println("⚠️ Spread too wide for " + symbol + " (" + currentSpread + " pips)");
+        double maxAllowedSpread = Math.max(1.5, atr * 0.25); // Allow at least 1.5 pips for majors
+        if (currentSpread > maxAllowedSpread) {
+             System.out.println("⚠️ [Skip] Spread too wide for " + symbol + " (" + currentSpread + " > " + String.format("%.1f", maxAllowedSpread) + " limit)");
              return signals;
         }
 
-        // --- 1. GLOBAL MACRO BIAS AUDIT ---
+        // --- 1. GLOBAL MACRO BIAS AUDIT (RELAXED) ---
         TrendStructure h4 = getHigherTimeframeTrendStructure(symbol, "H4", 450);
         TrendStructure h1 = getHigherTimeframeTrendStructure(symbol, "H1", 300);
-        if (h4.trend.equals("FLAT") || h1.trend.equals("FLAT")) return signals;
+        
+        // Allow trading if H4 is trending, even if H1 is flat (consolidation setup)
+        if (h4.trend.equals("FLAT")) {
+            System.out.println("⏩ [Skip] " + symbol + " Macro (H4) is FLAT. Awaiting trend development.");
+            return signals;
+        }
 
         // --- 2. INSTITUTIONAL TIMING (KILLZONES) ---
         boolean isKillzone = isWithinKillzone();
@@ -3854,7 +3894,7 @@ public class Fxausd {
             return 2.2;
         }
         if (atrPct <= 0.0002) {
-            return 1.0;
+            return 1.2;
         }
         return 1.4;
     }
@@ -5157,7 +5197,7 @@ public class Fxausd {
                 } catch (NumberFormatException ignored) {
                 }
             }
-            return 1.0;
+            return 1.2;
         }
 
         public boolean isHighImpactNewsWindow() {
@@ -5389,7 +5429,7 @@ public class Fxausd {
                     return winRate < 0.55 ? 0.85 : 1.0; // Reduce confidence if winrate is low
                 }
             } catch (Exception e) { e.printStackTrace(); }
-            return 1.0;
+            return 1.2;
         }
 
         public boolean insertTrade(TradeRecord record) {
