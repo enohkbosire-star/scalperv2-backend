@@ -129,7 +129,28 @@ public class CloudAPI {
         });
 
         get("/api/signals", (req, res) -> {
-            return gson.toJson(new ArrayList<>(Fxausd.recentLiveSignals));
+            // Priority: Return Database signals for institutional transparency
+            List<Map<String, Object>> signals = new ArrayList<>();
+            try (Connection conn = connect()) {
+                ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM signals ORDER BY id DESC LIMIT 20");
+                while (rs.next()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("symbol", rs.getString("pair"));
+                    m.put("direction", rs.getString("action"));
+                    m.put("entry", rs.getDouble("entry_price"));
+                    m.put("stopLoss", rs.getDouble("sl"));
+                    m.put("takeProfit", rs.getDouble("tp"));
+                    m.put("mlConfidence", rs.getDouble("confidence"));
+                    m.put("signalStrength", rs.getDouble("strength"));
+                    m.put("reason", rs.getString("reason"));
+                    m.put("timestamp", rs.getTimestamp("timestamp") != null ? rs.getTimestamp("timestamp").getTime() : System.currentTimeMillis());
+                    signals.add(m);
+                }
+            } catch (Exception e) { 
+                // Fallback to memory if DB fails
+                return gson.toJson(new ArrayList<>(Fxausd.recentLiveSignals)); 
+            }
+            return gson.toJson(signals);
         });
 
         get("/api/trades", (req, res) -> {
