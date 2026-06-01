@@ -38,6 +38,21 @@ public class CloudAPI {
         String portStr = System.getenv("PORT");
         int portNumber = (portStr != null && !portStr.isEmpty()) ? Integer.parseInt(portStr) : 4567;
         
+        // Safety: If running locally, check if port is busy and try next one to avoid Exit 100
+        if (System.getenv("PORT") == null) {
+            int attempts = 0;
+            while (attempts < 10) {
+                try (java.net.ServerSocket ss = new java.net.ServerSocket(portNumber)) {
+                    ss.setReuseAddress(true);
+                    break; // Port is free
+                } catch (java.io.IOException e) {
+                    System.out.println("⚠️ Cloud API Port " + portNumber + " is busy. Trying " + (portNumber + 1) + "...");
+                    portNumber++;
+                    attempts++;
+                }
+            }
+        }
+
         port(portNumber);
         ipAddress("0.0.0.0");
 
