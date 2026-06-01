@@ -61,10 +61,8 @@ public class Fxausd {
     static final double ELITE_MIN_SMC_CONFLUENCE = 0.65;
     static final double ELITE_MIN_VOLUME_SPIKE = 1.05;
     static final double ELITE_MIN_ML_PROBABILITY = 0.65;
-    static final double ELITE_MIN_RR_RATIO = 2.0;
-    static final double ELITE_SNIPER_CONFIDENCE = 0.82;
+    static final double ELITE_MIN_RR_RATIO = 2.0; 
 
-    // Advanced Market Intelligence Data
     public static class MarketIntelligence {
         public String bias = "NEUTRAL";
         public String session = "IDLE";
@@ -1573,7 +1571,8 @@ public class Fxausd {
     public static String MT5_CHART_ENDPOINT_OVERRIDE = null;
     public static String MT5_SYMBOLS_ENDPOINT_OVERRIDE = null;
     public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
-    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5001/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5000/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "http://127.0.0.1:5001/api";
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
     public static final String DEFAULT_MT5_FALLBACK_ENDPOINT = DEFAULT_MT5_FALLBACK_BASE_ENDPOINT + "/order";
     private static final java.util.Set<String> sentSignalKeys = new java.util.HashSet<>();
@@ -1700,7 +1699,13 @@ public class Fxausd {
             for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
                 endpoints.add(normalizeMt5OrderEndpoint(base));
             }
+            for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+                endpoints.add(normalizeMt5OrderEndpoint(base));
+            }
             for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
+                endpoints.add(normalizeMt5OrderEndpoint(base));
+            }
+            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
                 endpoints.add(normalizeMt5OrderEndpoint(base));
             }
         }
@@ -1737,7 +1742,13 @@ public class Fxausd {
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
             endpoints.add(base + "/candles");
         }
+        for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+            endpoints.add(base + "/candles");
+        }
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
+            endpoints.add(base + "/candles");
+        }
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
             endpoints.add(base + "/candles");
         }
         return new ArrayList<>(endpoints);
@@ -1770,7 +1781,13 @@ public class Fxausd {
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
             endpoints.add(base + "/symbols");
         }
+        for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+            endpoints.add(base + "/symbols");
+        }
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
+            endpoints.add(base + "/symbols");
+        }
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
             endpoints.add(base + "/symbols");
         }
         return new ArrayList<>(endpoints);
@@ -2481,6 +2498,9 @@ public class Fxausd {
                 conn.setReadTimeout(30000);
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/json");
+                if (MT5_API_KEY != null && !MT5_API_KEY.isEmpty()) {
+                    conn.setRequestProperty("Authorization", "Bearer " + MT5_API_KEY);
+                }
 
                 int status = conn.getResponseCode();
                 if (status != HttpURLConnection.HTTP_OK) {
@@ -2521,7 +2541,8 @@ public class Fxausd {
         }
 
         if (lastException != null) {
-            System.out.println("   Tip: if your MT5 bridge is not on https://fxausd-bridge.onrender.com/api or http://127.0.0.1:5001/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or MT5_CHART_URL.");
+            System.out.println("   Tip: if your MT5 bridge is not on " + DEFAULT_MT5_BASE_ENDPOINT + " or http://127.0.0.1:5000/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or MT5_CHART_URL.");
+            System.out.println("   Ensure your Python MT5 bridge is running (usually on port 5000 or 5001).");
             if (System.getenv("PORT") != null) {
                 System.out.println("   ☁️  Running in Cloud: You likely need a tunnel (ngrok) for your local Windows MT5 bridge. Set MT5_CHART_URL to your ngrok address.");
             }
@@ -3479,81 +3500,119 @@ public class Fxausd {
     private static java.util.List<TradeSignal> generateEliteQuantumSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
         if (candles == null || candles.size() < 200) return signals;
+        
+        // --- 4. NEWS FILTER (ENFORCED) ---
+        if (isHighImpactNewsWindow()) {
+            System.out.println("⚠️ News window active - signal generation suppressed for " + symbol);
+            return signals;
+        }
 
         int last = candles.size() - 1;
         Candle current = candles.get(last);
         double price = current.close;
+        double atr = calculateATR(candles, last, 14);
         
+        // --- 3. SPREAD FILTER ---
+        double currentSpread = getCurrentSpreadPips();
+        if (currentSpread > atr * 0.15) {
+             System.out.println("⚠️ Spread too wide for " + symbol + " (" + currentSpread + " pips)");
+             return signals;
+        }
+
         // --- 1. GLOBAL MACRO BIAS AUDIT ---
         TrendStructure h4 = getHigherTimeframeTrendStructure(symbol, "H4", 450);
         TrendStructure h1 = getHigherTimeframeTrendStructure(symbol, "H1", 300);
-        if (h4.trend.equals("FLAT") || h1.trend.equals("FLAT")) return signals; // Zero trade on low liquidity
+        if (h4.trend.equals("FLAT") || h1.trend.equals("FLAT")) return signals;
 
         // --- 2. INSTITUTIONAL TIMING (KILLZONES) ---
         boolean isKillzone = isWithinKillzone();
         if (!isKillzone && !parseBooleanEnv(LIVE_FORCE_SIGNAL_ENV)) return signals;
 
-        // --- 3. MICRO-STRUCTURE DISPLACEMENT (BOS + CHoCH) ---
-        int structure = detectMarketStructure(candles, last, 20);
-        int bos = detectBOS(candles, last);
+        // --- 3. MICRO-STRUCTURE DISPLACEMENT ---
         int choch = detectCHoCH(candles, last);
+        int bos = detectBOS(candles, last);
         boolean displaced = Math.abs(calculateVolumeImbalance(candles, last)) > 0.8;
         
-        // --- 4. LIQUIDITY PURGE CHECK (RETAIL TRAP DETECTION) ---
+        // --- 4. LIQUIDITY PURGE CHECK ---
         boolean sweep = detectLiquiditySweep(candles, last);
         double liquidity = detectLiquidityZone(candles, last, 15);
         
-        // --- 5. ORDER FLOW & VWAP CONVERGENCE ---
+        // --- 5. ORDER FLOW & VWAP ---
         double orderFlow = calculateOrderFlowIntensity(candles, last);
         double vwap = calculateVWAP(candles, last, 20);
-        boolean exhaustion = detectExhaustionDivergence(candles, last, structure == 1);
         
-        // --- 6. THE AI WIN RATE MATRIX (THE CONFLUENCE) ---
-        // Optimization: H4 Macro Trending + H1/Local Reversal Trigger (QILH Precision)
-        // We catch signals when H4 macro is trending, and H1/Local provides the entry "trigger" 
-        // This targets the exact moment institutional liquidity is hunted.
+        // --- 6. SCORING SYSTEM (HARD BINARY REMOVED) ---
+        int buyScore = 0;
+        int sellScore = 0;
         
-        boolean h4MacroUp = h4.trend.equals("UP");
-        boolean h4MacroDown = h4.trend.equals("DOWN");
-        
-        // H1 Trigger: Not trending aggressively against H4, or showing reversal/accumulation (FLAT)
-        boolean h1TriggerBuy = h1.trend.equals("UP") || h1.trend.equals("FLAT"); 
-        boolean h1TriggerSell = h1.trend.equals("DOWN") || h1.trend.equals("FLAT");
+        // Trend confluences (45 total)
+        if (h4.trend.equals("UP")) buyScore += 25; else sellScore += 25;
+        if (h1.trend.equals("UP")) buyScore += 20; else if (h1.trend.equals("DOWN")) sellScore += 20;
 
-        // Local triggers (M5/M1)
-        boolean localTriggerBuy = (choch == 1 || bos == 1);
-        boolean localTriggerSell = (choch == -1 || bos == -1);
+        // Triggers (35 total)
+        if (choch == 1 || bos == 1) buyScore += 20;
+        if (choch == -1 || bos == -1) sellScore += 20;
+        if (sweep) {
+            if (current.close > current.open) buyScore += 15; else sellScore += 15;
+        }
 
-        boolean institutionalBuy = h4MacroUp && h1TriggerBuy && localTriggerBuy && sweep && price > vwap && orderFlow > 0.55;
-        boolean institutionalSell = h4MacroDown && h1TriggerSell && localTriggerSell && sweep && price < vwap && orderFlow < 0.45;
+        // Market Dynamics (20 total)
+        if (price > vwap && orderFlow > 0.55) buyScore += 20;
+        if (price < vwap && orderFlow < 0.45) sellScore += 20;
+
+        // --- 9. SESSION WEIGHTING ---
+        String session = currentIntel.session;
+        int sessionBonus = 0;
+        if (session.contains("LONDON") && session.contains("NY")) sessionBonus = 15;
+        else if (session.contains("LONDON")) sessionBonus = 10;
+        else if (session.contains("NY")) sessionBonus = 5;
+        else if (session.contains("ASIA")) sessionBonus = -10;
+        
+        buyScore += sessionBonus;
+        sellScore += sessionBonus;
+
+        boolean institutionalBuy = buyScore >= 80;
+        boolean institutionalSell = sellScore >= 80;
         
         if (!institutionalBuy && !institutionalSell) return signals;
 
         // --- 7. MULTI-LAYER AI EXECUTION PROTOCOL ---
         String direction = institutionalBuy ? "BUY" : "SELL";
-        double strength = (orderFlow * 40) + (liquidity * 30) + (displaced ? 30 : 0);
-        strength = Math.min(100.0, strength);
+        int finalScore = institutionalBuy ? buyScore : sellScore;
+        double strength = Math.min(100.0, finalScore);
         
-        double mlProb = 0.80 + (new Random().nextDouble() * 0.18); // AI Prediction weighting
+        // --- 1 & 8. HISTORICAL AI CONFIDENCE ---
+        String setupName = "QILH_" + direction;
+        double mlProb = tradeDatabase.getHistoricalWinRate(setupName);
+        double pairMult = tradeDatabase.getPairConfidenceMultiplier(symbol);
+        mlProb *= pairMult;
 
-        // WORLD BANK SNIPER (ULTRA LEVERAGE)
-        double sniperSl = Math.max(8.0, convertPriceDiffToPips(symbol, institutionalBuy ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
-        sniperSl = Math.min(sniperSl, 15.0); 
-        
-        signals.add(createEliteSignal(symbol, direction, price, sniperSl, sniperSl * 5.0, mlProb, 0.90, strength, "AI QUANTUM SNIPER", institutionalBuy));
-        
-        // INSTITUTIONAL CORE (AI ENHANCED)
-        signals.add(createEliteSignal(symbol, direction, price, 18.0, 55.0, mlProb, 0.85, strength, "INSTITUTIONAL CORE AI", institutionalBuy));
-        
-        // LIQUIDITY VOID (AI TARGETED)
-        signals.add(createEliteSignal(symbol, direction, price, 35.0, 200.0, mlProb, 0.82, strength, "LIQUIDITY VOID AI", institutionalBuy));
+        // WORLD BANK SNIPER (PICK ONLY ONE BASED ON STRENGTH)
+        double sl = Math.max(8.0, convertPriceDiffToPips(symbol, institutionalBuy ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
+        sl = Math.min(sl, 25.0); 
 
-        System.out.println("🏦 [WORLD BANK LEVEL] QILH System Detected A+ Confluence for " + symbol + " " + direction);
+        if (strength > 90) {
+            signals.add(createEliteSignal(symbol, direction, price, sl, sl * 5.0, mlProb, 0.95, strength, "AI QUANTUM SNIPER", institutionalBuy));
+        } else if (strength > 80) {
+            signals.add(createEliteSignal(symbol, direction, price, sl * 1.2, sl * 3.0, mlProb, 0.88, strength, "INSTITUTIONAL CORE AI", institutionalBuy));
+        } else {
+            signals.add(createEliteSignal(symbol, direction, price, sl * 1.5, sl * 2.0, mlProb, 0.82, strength, "LIQUIDITY VOID AI", institutionalBuy));
+        }
+
+        System.out.println("🏦 [WORLD BANK LEVEL] QILH Confluence Detected: Score=" + finalScore + " for " + symbol + " " + direction);
 
         updateGlobalIntelligence(symbol, candles);
         return signals;
     }
 
+
+    private static double getCurrentSpreadPips() {
+        String env = System.getenv("CURRENT_SPREAD_PIPS");
+        if (env != null && !env.isEmpty()) {
+            try { return Double.parseDouble(env); } catch (Exception e) {}
+        }
+        return 1.0; // Default fallback
+    }
 
     private static TradeSignal createEliteSignal(String symbol, String direction, double entry, double slPips, double tpPips, double ml, double smc, double strength, String type, boolean bullish) {
         double slPrice = bullish ? (entry - convertPipsToPrice(symbol, slPips)) : (entry + convertPipsToPrice(symbol, slPips));
@@ -3573,11 +3632,22 @@ public class Fxausd {
         double recentHigh = getRecentHigh(candles, index - 20, index - 1);
         double recentLow = getRecentLow(candles, index - 20, index - 1);
         Candle current = candles.get(index);
+        double avgVolume = calculateAverageVolume(candles, index - 1, 20);
+        
+        // Exact solution: Require sweepDistance > ATR * 0.25 and volume > avgVolume * 1.5
+        boolean volumeSpike = current.volume > avgVolume * 1.5;
         
         // Bullish sweep: price dipped below recent low and snapped back
-        if (current.low < recentLow && current.close > recentLow) return true;
+        if (current.low < recentLow && current.close > recentLow) {
+            double sweepDistance = recentLow - current.low;
+            if (sweepDistance > atr * 0.25 && volumeSpike) return true;
+        }
+        
         // Bearish sweep: price poked above recent high and closed below
-        if (current.high > recentHigh && current.close < recentHigh) return true;
+        if (current.high > recentHigh && current.close < recentHigh) {
+            double sweepDistance = current.high - recentHigh;
+            if (sweepDistance > atr * 0.25 && volumeSpike) return true;
+        }
         
         return false;
     }
@@ -3630,6 +3700,7 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateSMCSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
+        if (isHighImpactNewsWindow()) return signals;
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -3774,7 +3845,7 @@ public class Fxausd {
 
     private static double calculateSMCStopLossDistance(double atr, double minPriceDistance, double liquidity, double atrPct) {
         double volatilityFactor = 1.0 + Math.max(0.0, 0.18 - liquidity * 0.13);
-        double atrMultiplier = getDynamicAtrMultiplier(atrPct);
+        double atrMultiplier = getDynamicAtrMultiplier   (atrPct);
         return Math.max(atr * atrMultiplier, minPriceDistance) * volatilityFactor;
     }
 
@@ -3843,6 +3914,7 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateMeanReversionSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
+        if (isHighImpactNewsWindow()) return signals;
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -3962,6 +4034,7 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateBreakoutSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
+        if (isHighImpactNewsWindow()) return signals;
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -4640,36 +4713,27 @@ public class Fxausd {
         double ema20 = calculateEMA(data, index, 20);
         double ema50 = calculateEMA(data, index, 50);
         double emaSlope = Math.abs((ema20 - ema50) / Math.max(ema50, 1e-6));
-        int structure = detectMarketStructure(data, index, period);
 
-        double high = Double.MIN_VALUE;
-        double low = Double.MAX_VALUE;
-        double totalRange = 0;
-        for (int i = index - period; i < index; i++) {
-            high = Math.max(high, data.get(i).high);
-            low = Math.min(low, data.get(i).low);
-            totalRange += data.get(i).high - data.get(i).low;
+        // --- UPGRADED REGIME DETECTION ---
+        if (atrPct > 0.0015) return "VOLATILE";
+        
+        if (isRangingMarket(data, index, period)) {
+             // Deep ranging analysis: Accumulation vs Distribution
+             double rsi = calculateRSI(data, index, 14);
+             if (rsi < 45) return "ACCUMULATION";
+             if (rsi > 55) return "DISTRIBUTION";
+             return "RANGING";
         }
-        double channelRange = high - low;
-        double avgRange = totalRange / period;
-
-        if (isRangingMarket(data, index, period) || (atrPct < 0.00020 && emaSlope < 0.0009)) {
-            return "ranging";
-        }
-        if (emaSlope > 0.0010 || (structure != 0 && Math.abs(currentPrice - ema50) / Math.max(ema50, 1e-6) > 0.0010)) {
-            return "trending";
-        }
-        if (channelRange > atr * period * 1.4 || avgRange > atr * 1.3) {
-            return "volatile";
-        }
-
-        return "ranging";
+        
+        if (emaSlope > 0.0015) return "TRENDING";
+        
+        return "RANGING";
     }
 
     // Resistance/Support Flip - when key level changes from resistance to support or vice versa
     public static double detectLevelFlip(java.util.List<Candle> data, int index, int period) {
         if (index < period || index >= data.size()) {
-            return 0;
+            return 0.0;
         }
 
         double highestHigh = Double.MIN_VALUE;
@@ -4683,7 +4747,7 @@ public class Fxausd {
         }
 
         double currentClose = data.get(index).close;
-        double flipStrength = 0;
+        double flipStrength = 0.0;
 
         // Resistance becomes support when price breaks above and pulls back
         if (currentClose > highestHigh && data.get(index).volume > 1000) {
@@ -5280,7 +5344,52 @@ public class Fxausd {
                     + ")";
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(sql);
+                
+                // --- ADDED FOR AI CONFIDENCE IMPROVEMENT ---
+                stmt.execute("CREATE TABLE IF NOT EXISTS trade_stats ("
+                        + "setup_type VARCHAR(64) PRIMARY KEY, "
+                        + "wins INTEGER DEFAULT 0, "
+                        + "losses INTEGER DEFAULT 0)");
+                
+                // --- ADDED FOR PAIR SPECIFIC INTELLIGENCE ---
+                stmt.execute("CREATE TABLE IF NOT EXISTS pair_performance ("
+                        + "symbol VARCHAR(64) PRIMARY KEY, "
+                        + "wins INTEGER DEFAULT 0, "
+                        + "losses INTEGER DEFAULT 0, "
+                        + "profit_factor DOUBLE PRECISION DEFAULT 1.0, "
+                        + "drawdown DOUBLE PRECISION DEFAULT 0.0)");
             }
+        }
+
+        public double getHistoricalWinRate(String setupType) {
+            if (!enabled) return 0.75; // Default if DB unavailable
+            String sql = "SELECT wins, losses FROM trade_stats WHERE setup_type = ?";
+            try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, setupType);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    int wins = rs.getInt("wins");
+                    int losses = rs.getInt("losses");
+                    return (double) wins / Math.max(1, wins + losses);
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+            return 0.75;
+        }
+
+        public double getPairConfidenceMultiplier(String symbol) {
+            if (!enabled) return 1.0;
+            String sql = "SELECT wins, losses FROM pair_performance WHERE symbol = ?";
+            try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, symbol);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    int wins = rs.getInt("wins");
+                    int losses = rs.getInt("losses");
+                    double winRate = (double) wins / Math.max(1, wins + losses);
+                    return winRate < 0.55 ? 0.85 : 1.0; // Reduce confidence if winrate is low
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+            return 1.0;
         }
 
         public boolean insertTrade(TradeRecord record) {

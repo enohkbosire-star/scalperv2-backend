@@ -294,7 +294,7 @@ public class Backtester {
                 continue;
             }
 
-            if ("ranging".equals(Fxausd.detectMarketRegime(data, i, 20))) {
+            if ("RANGING".equalsIgnoreCase(Fxausd.detectMarketRegime(data, i, 20))) {
                 continue;
             }
 

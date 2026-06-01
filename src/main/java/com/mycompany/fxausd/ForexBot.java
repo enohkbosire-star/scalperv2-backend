@@ -364,8 +364,15 @@ public class ForexBot {
         
         public synchronized void openPosition(BotSignal signal) {
             double risk = Math.abs(signal.entry - signal.stopLoss);
+            if (risk < 0.0001) {
+                log("❌ Signal rejected: risk too small (invalid SL).");
+                return;
+            }
             double riskAmount = accountBalance * riskPercent;
             double lotSize = riskAmount / (risk * 100000);
+            
+            // Institutional Lot Size Cap
+            lotSize = Math.min(10.0, Math.max(0.01, lotSize));
             
             Position pos = new Position(signal.ticketNumber, signal.symbol, signal.direction,
                                        signal.entry, signal.stopLoss, signal.takeProfit, lotSize);
@@ -802,16 +809,7 @@ public class ForexBot {
     }
     
     private static Map<String, Object> parseJSON(String json) {
-        // Simple JSON parser
-        Map<String, Object> map = new HashMap<>();
-        String[] pairs = json.replace("{", "").replace("}", "").split(",");
-        for (String pair : pairs) {
-            String[] kv = pair.split(":");
-            String key = kv[0].replace("\"", "").trim();
-            String value = kv[1].replace("\"", "").trim();
-            map.put(key, value);
-        }
-        return map;
+        return GSON.fromJson(json, new TypeToken<Map<String, Object>>(){}.getType());
     }
 
     private static int fetchSignalsFromPythonService(BotState botState) throws IOException {
