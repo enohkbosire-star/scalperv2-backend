@@ -3637,7 +3637,7 @@ public class Fxausd {
 
         // --- 7. MULTI-LAYER AI EXECUTION PROTOCOL ---
         String direction = institutionalBuy ? "BUY" : "SELL";
-        int finalScore = institutionalBuy ? buyScore : sellScore;
+        finalScore = institutionalBuy ? buyScore : sellScore;
         double strength = Math.min(100.0, finalScore);
         
         // --- 1 & 8. HISTORICAL AI CONFIDENCE ---
