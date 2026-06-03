@@ -21,7 +21,7 @@ public class MobileSignalBridge {
                 conn.setReadTimeout(5000);
                 conn.setDoOutput(true);
 
-                String json = String.format(
+                String json = String.format(java.util.Locale.US,
                     "{\"pair\": \"%s\", \"action\": \"%s\", \"entry\": %f, \"tp\": %f, \"sl\": %f, \"confidence\": %f, \"strength\": %f, \"reason\": \"%s\", \"risk_reward\": %f, \"session\": \"%s\", \"type\": \"%s\"}",
                     pair, action, entry, tp, sl, confidence, strength, 
                     reason != null ? reason.replace("\"", "\\\"") : "", 
