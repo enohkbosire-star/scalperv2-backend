@@ -14,6 +14,8 @@ import com.sun.net.httpserver.HttpServer;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -25,6 +27,8 @@ import org.jfree.data.xy.OHLCDataItem;
 
 
 public class Fxausd {
+
+    private static final Logger logger = LoggerFactory.getLogger(Fxausd.class);
 
     static class Candle {
 
@@ -1061,13 +1065,16 @@ public class Fxausd {
 
                 try {
                     for (String symbol : liveSymbols) {
-                        System.out.println("🔍 [Audit] Scanning " + symbol + "...");
+                        System.out.println("\n🔍 [Audit] Scanning " + symbol + "...");
                         CloudAPI.updateBotStatus("SCANNING", "Quantum QILH Scan: " + symbol);
                         java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
                         if (symbolCandles.isEmpty()) {
                              System.out.println("⚠️ [Skip] " + symbol + ": Failed to fetch candles.");
                              continue;
                         }
+                        
+                        // Update Market Intelligence for this symbol fractal
+                        updateGlobalIntelligence(symbol, symbolCandles);
                         
                         // Use QUANTUM institutional strategy
                         java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
@@ -1076,7 +1083,7 @@ public class Fxausd {
                             System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
                             sendLiveSignals(eliteSignals); 
                         } else {
-                            System.out.println("⏳ [Idle] " + symbol + ": No valid setup detected in current fractal.");
+                            System.out.println("⏳ [Idle] " + symbol + ": Monitoring fractal for A+ confluence...");
                         }
                         liveSignals.addAll(eliteSignals);
                     }
@@ -3546,21 +3553,30 @@ public class Fxausd {
         double price = current.close;
         double atr = calculateATR(candles, last, 14);
         
-        // --- 3. SPREAD FILTER (DYNAMIC) ---
+        // --- 3. SPREAD FILTER (DYNAMIC + CONFIGURABLE) ---
         double currentSpread = getCurrentSpreadPips();
-        double maxAllowedSpread = Math.max(1.5, atr * 0.25); // Allow at least 1.5 pips for majors
+        
+        // Environment variable override (e.g. MAX_SPREAD_EURUSD=1.5)
+        String envMaxSpread = System.getenv("MAX_SPREAD_" + symbol.toUpperCase());
+        double maxAllowedSpread;
+        if (envMaxSpread != null && !envMaxSpread.isBlank()) {
+            maxAllowedSpread = Double.parseDouble(envMaxSpread);
+        } else {
+            maxAllowedSpread = Math.max(1.5, atr * 0.25); // Dynamic default
+        }
+        
         if (currentSpread > maxAllowedSpread) {
-             System.out.println("⚠️ [Skip] Spread too wide for " + symbol + " (" + currentSpread + " > " + String.format("%.1f", maxAllowedSpread) + " limit)");
+             logger.warn("⚠️ [Skip] Spread too wide for {}: {} > {} limit", symbol, currentSpread, String.format("%.1f", maxAllowedSpread));
              return signals;
         }
 
-        // --- 1. GLOBAL MACRO BIAS AUDIT (RELAXED) ---
+        // --- 1. GLOBAL MACRO BIAS AUDIT (FURTHER RELAXED) ---
         TrendStructure h4 = getHigherTimeframeTrendStructure(symbol, "H4", 450);
         TrendStructure h1 = getHigherTimeframeTrendStructure(symbol, "H1", 300);
         
-        // Allow trading if H4 is trending, even if H1 is flat (consolidation setup)
-        if (h4.trend.equals("FLAT")) {
-            System.out.println("⏩ [Skip] " + symbol + " Macro (H4) is FLAT. Awaiting trend development.");
+        // Only skip if BOTH timeframes are FLAT
+        if (h4.trend.equals("FLAT") && h1.trend.equals("FLAT")) {
+            logger.info("⏩ [Skip] {}: Both H4 and H1 are FLAT. Consolidation too heavy.", symbol);
             return signals;
         }
 
@@ -3610,6 +3626,9 @@ public class Fxausd {
         
         buyScore += sessionBonus;
         sellScore += sessionBonus;
+
+        int finalScore = Math.max(buyScore, sellScore);
+        System.out.printf("   📊 [Setup Audit] %s Setup Score: %d/100 (Threshold: 80)\n", symbol, finalScore);
 
         boolean institutionalBuy = buyScore >= 80;
         boolean institutionalSell = sellScore >= 80;
