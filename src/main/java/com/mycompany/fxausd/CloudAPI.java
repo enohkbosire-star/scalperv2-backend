@@ -475,6 +475,7 @@ public class CloudAPI {
                 ps.setString(11, (String) data.get("session"));
                 ps.setString(12, (String) data.get("type"));
                 ps.executeUpdate();
+                System.out.println("💾 [Cloud DB] Signal successfully persisted to Neon for " + data.get("pair"));
                 return gson.toJson(Map.of("status", "success"));
             } catch (Exception e) {
                 e.printStackTrace();
