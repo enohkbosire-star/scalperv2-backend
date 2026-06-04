@@ -137,14 +137,8 @@ public class Fxausd {
     static final String LIVE_ACTIVE_SESSION_START_ENV = "LIVE_ACTIVE_SESSION_START_UTC";
     static final String LIVE_ACTIVE_SESSION_END_ENV = "LIVE_ACTIVE_SESSION_END_UTC";
     static final java.util.List<String> PRIMARY_FX_SYMBOLS = Arrays.asList(
-        // Major Forex
-        "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD", 
-        // Major Indices
-        "NAS100", "US30", "SPX500", "GER30", "UK100",
-        // Metals & Commodities
-        "XAUUSD", "XAGUSD", "USOIL", "UKOIL",
-        // Popular Crypto
-        "BTCUSD", "ETHUSD"
+        "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NAS100", "US30", "AUDUSD", "USDCAD", "NZDUSD", 
+        "EURJPY", "GBPJPY", "EURGBP", "USDCHF", "BTCUSD", "ETHUSD", "UK100", "GER30"
     );
 
     private static String getBaseSymbol(String brokerSymbol) {
@@ -3400,13 +3394,20 @@ public class Fxausd {
 
     public static int detectBOS(java.util.List<Candle> data, int index) {
         if (index < 50) return 0;
-        double currentHigh = data.get(index).high;
-        double currentLow = data.get(index).low;
-        double prevSwingHigh = getRecentHigh(data, index - 30, index - 1);
-        double prevSwingLow = getRecentLow(data, index - 30, index - 1);
+        double close = data.get(index).close;
         
-        if (data.get(index).close > prevSwingHigh) return 1; // Bullish Break of Structure
-        if (data.get(index).close < prevSwingLow) return -1; // Bearish Break of Structure
+        // Major BOS (30-bar swing)
+        double majorHigh = getRecentHigh(data, index - 30, index - 1);
+        double majorLow = getRecentLow(data, index - 30, index - 1);
+        if (close > majorHigh) return 1;
+        if (close < majorLow) return -1;
+
+        // Internal BOS (10-bar swing - Mistake #3)
+        double internalHigh = getRecentHigh(data, index - 10, index - 1);
+        double internalLow = getRecentLow(data, index - 10, index - 1);
+        if (close > internalHigh) return 1;
+        if (close < internalLow) return -1;
+
         return 0;
     }
 
@@ -3536,15 +3537,15 @@ public class Fxausd {
     }
 
     // ========================================================================
-    // QUANTUM INSTITUTIONAL LIQUIDITY HUNT (QILH) - THE ULTIMATE 90% WIN RATE
+    // QUANTUM INSTITUTIONAL LIQUIDITY HUNT (QILH) - UPGRADED SCORING ENGINE
     // ========================================================================
     private static java.util.List<TradeSignal> generateEliteQuantumSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
         if (candles == null || candles.size() < 200) return signals;
         
-        // --- 4. NEWS FILTER (ENFORCED) ---
+        // --- 10. NEWS FILTER ---
         if (isHighImpactNewsWindow()) {
-            System.out.println("⚠️ News window active - signal generation suppressed for " + symbol);
+            System.out.println("⚠️ News window active - suppressing setup generation for " + symbol);
             return signals;
         }
 
@@ -3553,124 +3554,121 @@ public class Fxausd {
         double price = current.close;
         double atr = calculateATR(candles, last, 14);
         
-        // --- 3. SPREAD FILTER (DYNAMIC + CONFIGURABLE) ---
-        double currentSpread = getCurrentSpreadPips();
-        
-        // Environment variable override (e.g. MAX_SPREAD_EURUSD=1.5)
-        String envMaxSpread = System.getenv("MAX_SPREAD_" + symbol.toUpperCase());
+        // --- 9. DYNAMIC SPREAD FILTER ---
+        double currentSpread = getCurrentSpreadPips(symbol);
         double maxAllowedSpread;
-        if (envMaxSpread != null && !envMaxSpread.isBlank()) {
-            maxAllowedSpread = Double.parseDouble(envMaxSpread);
-        } else {
-            maxAllowedSpread = Math.max(1.5, atr * 0.25); // Dynamic default
-        }
-        
+        if (symbol.equalsIgnoreCase("XAUUSD")) maxAllowedSpread = 30.0;
+        else if (symbol.equalsIgnoreCase("EURUSD")) maxAllowedSpread = 1.2;
+        else if (symbol.equalsIgnoreCase("GBPUSD")) maxAllowedSpread = 1.5;
+        else if (symbol.equalsIgnoreCase("GBPJPY")) maxAllowedSpread = 2.5;
+        else maxAllowedSpread = Math.max(2.0, atr * 0.3);
+
         if (currentSpread > maxAllowedSpread) {
-             logger.warn("⚠️ [Skip] Spread too wide for {}: {} > {} limit", symbol, currentSpread, String.format("%.1f", maxAllowedSpread));
+             System.out.printf("⏩ [Skip] %s: Spread too wide (%.2f > %.2f)\n", symbol, currentSpread, maxAllowedSpread);
              return signals;
         }
 
-        // --- 1. GLOBAL MACRO BIAS AUDIT (FURTHER RELAXED) ---
+        // --- GLOBAL MACRO BIAS AUDIT ---
         TrendStructure h4 = getHigherTimeframeTrendStructure(symbol, "H4", 450);
         TrendStructure h1 = getHigherTimeframeTrendStructure(symbol, "H1", 300);
-        
-        // Only skip if BOTH timeframes are FLAT
-        if (h4.trend.equals("FLAT") && h1.trend.equals("FLAT")) {
-            logger.info("⏩ [Skip] {}: Both H4 and H1 are FLAT. Consolidation too heavy.", symbol);
-            return signals;
-        }
 
-        // --- 2. INSTITUTIONAL TIMING (KILLZONES) ---
-        boolean isKillzone = isWithinKillzone();
-        if (!isKillzone && !parseBooleanEnv(LIVE_FORCE_SIGNAL_ENV)) return signals;
-
-        // --- 3. MICRO-STRUCTURE DISPLACEMENT ---
-        int choch = detectCHoCH(candles, last);
+        // --- MICRO-STRUCTURE & LIQUIDITY ---
         int bos = detectBOS(candles, last);
-        boolean displaced = Math.abs(calculateVolumeImbalance(candles, last)) > 0.8;
-        
-        // --- 4. LIQUIDITY PURGE CHECK ---
+        int choch = detectCHoCH(candles, last);
         boolean sweep = detectLiquiditySweep(candles, last);
-        double liquidity = detectLiquidityZone(candles, last, 15);
-        
-        // --- 5. ORDER FLOW & VWAP ---
         double orderFlow = calculateOrderFlowIntensity(candles, last);
         double vwap = calculateVWAP(candles, last, 20);
         
-        // --- 6. SCORING SYSTEM (HARD BINARY REMOVED) ---
+        // --- UPGRADED SCORING SYSTEM (Mistake #1, #2, #5, #7) ---
         int buyScore = 0;
         int sellScore = 0;
-        
-        // Trend confluences (45 total)
-        if (h4.trend.equals("UP")) buyScore += 25; else sellScore += 25;
-        if (h1.trend.equals("UP")) buyScore += 20; else if (h1.trend.equals("DOWN")) sellScore += 20;
+        StringBuilder buyAudit = new StringBuilder("   [BUY Audit] ");
+        StringBuilder sellAudit = new StringBuilder("   [SELL Audit] ");
 
-        // Triggers (35 total)
-        if (choch == 1 || bos == 1) buyScore += 20;
-        if (choch == -1 || bos == -1) sellScore += 20;
-        if (sweep) {
-            if (current.close > current.open) buyScore += 15; else sellScore += 15;
+        // H4 Trend (25 pts)
+        if (h4.trend.equals("UP")) { buyScore += 25; buyAudit.append("H4:PASS "); } else { buyAudit.append("H4:FAIL "); }
+        if (h4.trend.equals("DOWN")) { sellScore += 25; sellAudit.append("H4:PASS "); } else { sellAudit.append("H4:FAIL "); }
+
+        // H1 Trend (20 pts)
+        if (h1.trend.equals("UP") || h1.trend.equals("FLAT")) { buyScore += 20; buyAudit.append("H1:PASS "); } else { buyAudit.append("H1:FAIL "); }
+        if (h1.trend.equals("DOWN") || h1.trend.equals("FLAT")) { sellScore += 20; sellAudit.append("H1:PASS "); } else { sellAudit.append("H1:FAIL "); }
+
+        // Local Trigger (BOS/CHoCH/Sweep) (30 pts - Non-blocking Mistake #2)
+        if (bos == 1 || choch == 1 || sweep) { buyScore += 30; buyAudit.append("TRIG:PASS "); } else { buyAudit.append("TRIG:FAIL "); }
+        if (bos == -1 || choch == -1 || sweep) { sellScore += 30; sellAudit.append("TRIG:PASS "); } else { sellAudit.append("TRIG:FAIL "); }
+
+        // VWAP Confirmation (10 pts)
+        if (price > vwap) { buyScore += 10; buyAudit.append("VWAP:PASS "); } else { buyAudit.append("VWAP:FAIL "); }
+        if (price < vwap) { sellScore += 10; sellAudit.append("VWAP:PASS "); } else { sellAudit.append("VWAP:FAIL "); }
+
+        // Order Flow Confirmation (Mistake #4: 0.52/0.48)
+        if (orderFlow > 0.52) { buyScore += 10; buyAudit.append("FLOW:PASS "); } else { buyAudit.append("FLOW:FAIL "); }
+        if (orderFlow < 0.48) { sellScore += 10; sellAudit.append("FLOW:PASS "); } else { sellAudit.append("FLOW:FAIL "); }
+
+        // Killzone Bonus (+15 Mistake #5)
+        if (isWithinKillzone()) {
+             buyScore += 15; sellScore += 15;
+             buyAudit.append("KZ:BONUS "); sellAudit.append("KZ:BONUS ");
         }
 
-        // Market Dynamics (20 total)
-        if (price > vwap && orderFlow > 0.55) buyScore += 20;
-        if (price < vwap && orderFlow < 0.45) sellScore += 20;
-
-        // --- 9. SESSION WEIGHTING ---
-        String session = currentIntel.session;
-        int sessionBonus = 0;
-        if (session.contains("LONDON") && session.contains("NY")) sessionBonus = 15;
-        else if (session.contains("LONDON")) sessionBonus = 10;
-        else if (session.contains("NY")) sessionBonus = 5;
-        else if (session.contains("ASIA")) sessionBonus = -10;
-        
-        buyScore += sessionBonus;
-        sellScore += sessionBonus;
+        // Regime Bonus (Mistake #6)
+        String regime = detectMarketRegime(candles, last, 30);
+        if (regime.equals("TRENDING")) {
+             buyScore += 10; sellScore += 10;
+             buyAudit.append("REG:TREND "); sellAudit.append("REG:TREND ");
+        } else if (regime.equals("ACCUMULATION") || regime.equals("DISTRIBUTION")) {
+             buyScore += 5; sellScore += 5;
+             buyAudit.append("REG:ACC/DIST "); sellAudit.append("REG:ACC/DIST ");
+        }
 
         int finalScore = Math.max(buyScore, sellScore);
-        System.out.printf("   📊 [Setup Audit] %s Setup Score: %d/100 (Threshold: 80)\n", symbol, finalScore);
-
-        boolean institutionalBuy = buyScore >= 80;
-        boolean institutionalSell = sellScore >= 80;
+        String direction = (buyScore >= 70 && buyScore >= sellScore) ? "BUY" : (sellScore >= 70) ? "SELL" : "NONE";
         
-        if (!institutionalBuy && !institutionalSell) return signals;
+        System.out.println(buyAudit.toString() + " -> " + buyScore);
+        System.out.println(sellAudit.toString() + " -> " + sellScore);
 
-        // --- 7. MULTI-LAYER AI EXECUTION PROTOCOL ---
-        String direction = institutionalBuy ? "BUY" : "SELL";
-        finalScore = institutionalBuy ? buyScore : sellScore;
-        double strength = Math.min(100.0, finalScore);
-        
-        // --- 1 & 8. HISTORICAL AI CONFIDENCE ---
-        String setupName = "QILH_" + direction;
-        double mlProb = tradeDatabase.getHistoricalWinRate(setupName);
-        double pairMult = tradeDatabase.getPairConfidenceMultiplier(symbol);
-        mlProb *= pairMult;
-
-        // WORLD BANK SNIPER (PICK ONLY ONE BASED ON STRENGTH)
-        double sl = Math.max(8.0, convertPriceDiffToPips(symbol, institutionalBuy ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
-        sl = Math.min(sl, 25.0); 
-
-        if (strength > 90) {
-            signals.add(createEliteSignal(symbol, direction, price, sl, sl * 5.0, mlProb, 0.95, strength, "AI QUANTUM SNIPER", institutionalBuy));
-        } else if (strength > 80) {
-            signals.add(createEliteSignal(symbol, direction, price, sl * 1.2, sl * 3.0, mlProb, 0.88, strength, "INSTITUTIONAL CORE AI", institutionalBuy));
-        } else {
-            signals.add(createEliteSignal(symbol, direction, price, sl * 1.5, sl * 2.0, mlProb, 0.82, strength, "LIQUIDITY VOID AI", institutionalBuy));
+        if (direction.equals("NONE")) {
+             System.out.printf("   ⏳ [Audit] %s No setup: Max Score %d (Req: 70)\n", symbol, finalScore);
+             return signals;
         }
 
-        System.out.println("🏦 [WORLD BANK LEVEL] QILH Confluence Detected: Score=" + finalScore + " for " + symbol + " " + direction);
+        // --- EXECUTION PROTOCOL ---
+        double strength = Math.min(100.0, finalScore);
+        String setupName = "QILH_" + direction;
+        double mlProb = tradeDatabase.getHistoricalWinRate(setupName);
+        double pairMult = tradeDatabase.getPairPerformanceMult(symbol);
+        mlProb *= pairMult;
+
+        double sl = Math.max(8.0, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
+        sl = Math.min(sl, 25.0); 
+
+        String type = strength >= 90 ? "AI QUANTUM SNIPER" : strength >= 80 ? "INSTITUTIONAL CORE AI" : "LIQUIDITY VOID AI";
+        signals.add(createEliteSignal(symbol, direction, price, sl, sl * 5.0, mlProb, 0.90, strength, type, direction.equals("BUY")));
+
+        System.out.println("🏦 [WORLD BANK LEVEL] Setup Executed: " + type + " for " + symbol + " " + direction + " Score=" + finalScore);
 
         updateGlobalIntelligence(symbol, candles);
         return signals;
     }
+    }
+    }
 
 
-    private static double getCurrentSpreadPips() {
-        String env = System.getenv("CURRENT_SPREAD_PIPS");
+    private static double getCurrentSpreadPips(String symbol) {
+        String env = System.getenv("CURRENT_SPREAD_" + symbol.toUpperCase());
         if (env != null && !env.isEmpty()) {
             try { return Double.parseDouble(env); } catch (Exception e) {}
         }
-        return 1.0; // Default fallback
+        
+        // Dynamic Standard Spreads
+        switch(symbol.toUpperCase()) {
+            case "EURUSD": return 0.8;
+            case "GBPUSD": return 1.2;
+            case "USDJPY": return 1.0;
+            case "XAUUSD": return 15.0; // Points
+            case "GBPJPY": return 2.2;
+            default: return 1.5;
+        }
     }
 
     private static TradeSignal createEliteSignal(String symbol, String direction, double entry, double slPips, double tpPips, double ml, double smc, double strength, String type, boolean bullish) {
@@ -5403,14 +5401,13 @@ public class Fxausd {
                     + ")";
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(sql);
-                
-                // --- ADDED FOR AI CONFIDENCE IMPROVEMENT ---
+                // 1. Setup trade_stats table
                 stmt.execute("CREATE TABLE IF NOT EXISTS trade_stats ("
                         + "setup_type VARCHAR(64) PRIMARY KEY, "
                         + "wins INTEGER DEFAULT 0, "
                         + "losses INTEGER DEFAULT 0)");
                 
-                // --- ADDED FOR PAIR SPECIFIC INTELLIGENCE ---
+                // 8. Setup pair_performance table
                 stmt.execute("CREATE TABLE IF NOT EXISTS pair_performance ("
                         + "symbol VARCHAR(64) PRIMARY KEY, "
                         + "wins INTEGER DEFAULT 0, "
@@ -5421,7 +5418,7 @@ public class Fxausd {
         }
 
         public double getHistoricalWinRate(String setupType) {
-            if (!enabled) return 0.75; // Default if DB unavailable
+            if (!enabled) return 0.75;
             String sql = "SELECT wins, losses FROM trade_stats WHERE setup_type = ?";
             try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, setupType);
@@ -5435,7 +5432,7 @@ public class Fxausd {
             return 0.75;
         }
 
-        public double getPairConfidenceMultiplier(String symbol) {
+        public double getPairPerformanceMult(String symbol) {
             if (!enabled) return 1.0;
             String sql = "SELECT wins, losses FROM pair_performance WHERE symbol = ?";
             try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -5445,10 +5442,10 @@ public class Fxausd {
                     int wins = rs.getInt("wins");
                     int losses = rs.getInt("losses");
                     double winRate = (double) wins / Math.max(1, wins + losses);
-                    return winRate < 0.55 ? 0.85 : 1.0; // Reduce confidence if winrate is low
+                    return winRate < 0.55 ? 0.85 : 1.0;
                 }
             } catch (Exception e) { e.printStackTrace(); }
-            return 1.2;
+            return 1.0;
         }
 
         public boolean insertTrade(TradeRecord record) {
