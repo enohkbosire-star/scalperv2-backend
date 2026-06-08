@@ -3527,9 +3527,7 @@ public class Fxausd {
         else if (strength > 70) currentIntel.setupQuality = "🥇 GOLD (85%+)";
         else currentIntel.setupQuality = "🥈 SILVER (70%+)";
 
-        // Update Session
-        ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
-        int hour = nowUtc.getHour();
+        // Update Session (reuse previously computed 'hour')
         if (hour >= 7 && hour < 12) currentIntel.session = "LONDON SESSION (HIGH VOL)";
         else if (hour >= 12 && hour < 16) currentIntel.session = "LONDON/NY OVERLAP (PEAK VOL)";
         else if (hour >= 16 && hour < 21) currentIntel.session = "NY SESSION (MODERATE)";
@@ -3650,8 +3648,6 @@ public class Fxausd {
         updateGlobalIntelligence(symbol, candles);
         return signals;
     }
-    }
-    }
 
 
     private static double getCurrentSpreadPips(String symbol) {
@@ -3709,7 +3705,6 @@ public class Fxausd {
         return false;
     }
 
-
     private static java.util.List<TradeSignal> generateLiveSignalsForStrategy(java.util.List<Candle> candles, String symbol, String liveTimeframe, String strategy) {
         if (candles == null || candles.isEmpty()) {
             return new ArrayList<>();
@@ -3729,7 +3724,6 @@ public class Fxausd {
                 String regime = detectMarketRegime(candles, candles.size() - 1, 50);
                 System.out.printf("▶ Live regime selection for %s on %s: %s%n", symbol, liveTimeframe, regime);
                 if ("trending".equals(regime)) {
-                    // Combine SMC and Breakout for trending markets
                     java.util.List<TradeSignal> combined = new ArrayList<>();
                     combined.addAll(generateSMCSignals(candles, symbol, liveTimeframe));
                     combined.addAll(generateBreakoutSignals(candles, symbol, liveTimeframe));
@@ -3737,7 +3731,6 @@ public class Fxausd {
                 } else if ("ranging".equals(regime)) {
                     return generateMeanReversionSignals(candles, symbol, liveTimeframe);
                 }
-                System.out.println("   ❌ HOLD: regime not strong enough for auto trading (" + regime + ").");
                 return new ArrayList<>();
             }
             case "smc":
