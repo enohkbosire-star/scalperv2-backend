@@ -3527,7 +3527,9 @@ public class Fxausd {
         else if (strength > 70) currentIntel.setupQuality = "🥇 GOLD (85%+)";
         else currentIntel.setupQuality = "🥈 SILVER (70%+)";
 
-        // Update Session (reuse previously computed 'hour')
+        // Update Session
+        ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
+        int hour = nowUtc.getHour();
         if (hour >= 7 && hour < 12) currentIntel.session = "LONDON SESSION (HIGH VOL)";
         else if (hour >= 12 && hour < 16) currentIntel.session = "LONDON/NY OVERLAP (PEAK VOL)";
         else if (hour >= 16 && hour < 21) currentIntel.session = "NY SESSION (MODERATE)";
