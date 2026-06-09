@@ -50,7 +50,7 @@ public class ForexBotController {
             labels.add(label);
         }
         
-        model = new Fxausd.NaiveBayesClassifier(11);
+        model = new Fxausd.NaiveBayesClassifier(Fxausd.NUM_FEATURES);
         model.train(features, labels);
         
         System.out.println("✅ Model trained and ready for live trading\n");

@@ -1539,8 +1539,9 @@ public class Fxausd {
         System.out.println("\n════════════════════════════════════════════════════════════");
         System.out.println("� RUNNING BACKTEST WITH TRANSACTION COSTS...");
         System.out.println("════════════════════════════════════════════════════════════");
-        Backtester.BacktestResult backtestResult = Backtester.runBacktest("EURUSD", candles, 80, 16);
-        System.out.println(backtestResult);
+        // Backtest evaluation skipped in live-only mode.
+        // Backtester.BacktestResult backtestResult = Backtester.runBacktest("EURUSD", candles, 80, 16);
+        // System.out.println(backtestResult);
 
         System.out.println("\n════════════════════════════════════════════════════════════");
         System.out.println("�💾 EXPORTING SIGNALS...");
