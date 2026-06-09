@@ -145,13 +145,13 @@ public class Backtester {
             if (direction.equals("BUY")) {
                 if (price <= stopLoss) {
                     exitPrice = stopLoss;
-                    profit = (stopLoss - entryPrice) * 10000;
+                    profit = Fxausd.toPips(symbol, stopLoss - entryPrice);
                     exitReason = reason;
                     profitUsd = profit * lotSize * 10.0;
                     return true;
                 } else if (price >= takeProfit) {
                     exitPrice = takeProfit;
-                    profit = (takeProfit - entryPrice) * 10000;
+                    profit = Fxausd.toPips(symbol, takeProfit - entryPrice);
                     exitReason = reason;
                     profitUsd = profit * lotSize * 10.0;
                     return true;
@@ -159,13 +159,13 @@ public class Backtester {
             } else {
                 if (price >= stopLoss) {
                     exitPrice = stopLoss;
-                    profit = (entryPrice - stopLoss) * 10000;
+                    profit = Fxausd.toPips(symbol, entryPrice - stopLoss);
                     exitReason = reason;
                     profitUsd = profit * lotSize * 10.0;
                     return true;
                 } else if (price <= takeProfit) {
                     exitPrice = takeProfit;
-                    profit = (entryPrice - takeProfit) * 10000;
+                    profit = Fxausd.toPips(symbol, entryPrice - takeProfit);
                     exitReason = reason;
                     profitUsd = profit * lotSize * 10.0;
                     return true;
@@ -210,7 +210,8 @@ public class Backtester {
         }
     }
     
-    public static BacktestResult runBacktest(java.util.List<Fxausd.Candle> data,
+    public static BacktestResult runBacktest(String symbol,
+                                             java.util.List<Fxausd.Candle> data,
                                              int numTrees,
                                              int numFeatures) {
         java.util.List<Trade> trades = new ArrayList<>();
@@ -226,8 +227,8 @@ public class Backtester {
         double slippagePips = 0.2;
         double commissionPips = 0.5;
         double totalCostPips = spreadPips + slippagePips + commissionPips;
-        double spreadPrice = spreadPips * 0.0001;
-        double slippagePrice = slippagePips * 0.0001;
+        double spreadPrice = Fxausd.convertPipsToPrice(symbol, spreadPips);
+        double slippagePrice = Fxausd.convertPipsToPrice(symbol, slippagePips);
         double pipValuePerStandardLot = 10.0;
         int retrainInterval = 50;
         Fxausd.RandomForestClassifier backtestModel = null;
@@ -244,7 +245,7 @@ public class Backtester {
                 Trade trade = iterator.next();
                 if (trade.evaluateBar(candle)) {
                     trade.profit -= totalCostPips;
-                    trade.profitUsd = trade.profit * trade.lotSize * pipValuePerStandardLot;
+                    trade.profitUsd = trade.profit * trade.lotSize * Fxausd.getPipValue(symbol);
                     balanceUsd += trade.profitUsd;
                     equityCurveUsd.add(balanceUsd);
                     System.out.println("Trade #" + trade.id + " CLOSED | P&L: " + 
@@ -300,8 +301,8 @@ public class Backtester {
 
             Fxausd.SMCSignal smcSignal = Fxausd.generateSMCSignal(data, i, prediction, probability);
             double strength = Fxausd.calculateSignalStrength(data, i, prediction, probability, smcSignal.confidence);
-            double riskPips = Math.abs(smcSignal.entry - smcSignal.stopLoss) / 0.0001;
-            double rewardPips = Math.abs(smcSignal.takeProfit - smcSignal.entry) / 0.0001;
+            double riskPips = Fxausd.toPips(symbol, Math.abs(smcSignal.entry - smcSignal.stopLoss));
+            double rewardPips = Fxausd.toPips(symbol, Math.abs(smcSignal.takeProfit - smcSignal.entry));
             double effectiveRiskPips = riskPips + totalCostPips;
             double effectiveRewardPips = rewardPips - totalCostPips;
             
@@ -313,7 +314,7 @@ public class Backtester {
                 continue;
             }
 
-            double lotSize = riskPerTradeUsd / (riskPips * pipValuePerStandardLot);
+            double lotSize = riskPerTradeUsd / (riskPips * Fxausd.getPipValue(symbol));
             if (lotSize <= 0) {
                 continue;
             }
@@ -327,7 +328,7 @@ public class Backtester {
             if (prediction == 1 && stopLoss >= entryPrice) continue;
             if (prediction == 0 && stopLoss <= entryPrice) continue;
 
-            Trade trade = new Trade(++tradeId, "EURUSD", smcSignal.direction, entryPrice, stopLoss, takeProfit, lotSize, i + 1);
+            Trade trade = new Trade(++tradeId, symbol, smcSignal.direction, entryPrice, stopLoss, takeProfit, lotSize, i + 1);
             activeTrades.add(trade);
             System.out.println("Trade #" + tradeId + " OPENED | " + smcSignal.direction + 
                              " @ " + String.format("%.5f", entryPrice) + " | Prob: " + String.format("%.2f", probability));
@@ -335,9 +336,9 @@ public class Backtester {
 
         Fxausd.Candle lastCandle = data.get(data.size() - 1);
         for (Trade trade : activeTrades) {
-            double pips = simulateTradePips(data, trade.entryIndex, trade.entryPrice, trade.stopLoss, trade.takeProfit, Math.max(1, data.size() - trade.entryIndex - 1));
+            double pips = simulateTradePips(data, symbol, trade.entryIndex, trade.entryPrice, trade.stopLoss, trade.takeProfit, Math.max(1, data.size() - trade.entryIndex - 1));
             trade.profit = pips - totalCostPips;
-            trade.profitUsd = trade.profit * trade.lotSize * pipValuePerStandardLot;
+            trade.profitUsd = trade.profit * trade.lotSize * Fxausd.getPipValue(symbol);
             trade.exitReason = "Closed at end of data";
             balanceUsd += trade.profitUsd;
             equityCurveUsd.add(balanceUsd);
@@ -355,6 +356,7 @@ public class Backtester {
     }
 
     public static double simulateTradePips(java.util.List<Fxausd.Candle> data,
+                                           String symbol,
                                            int entryIndex,
                                            double entryPrice,
                                            double stopLoss,
@@ -371,21 +373,21 @@ public class Backtester {
                 if (low <= stopLoss && high >= takeProfit) {
                     double distSL = Math.abs(entryPrice - stopLoss);
                     double distTP = Math.abs(takeProfit - entryPrice);
-                    return distSL <= distTP ? toPips(stopLoss - entryPrice) : toPips(takeProfit - entryPrice);
+                    return distSL <= distTP ? Fxausd.toPips(symbol, stopLoss - entryPrice) : Fxausd.toPips(symbol, takeProfit - entryPrice);
                 } else if (low <= stopLoss) {
-                    return toPips(stopLoss - entryPrice);
+                    return Fxausd.toPips(symbol, stopLoss - entryPrice);
                 } else if (high >= takeProfit) {
-                    return toPips(takeProfit - entryPrice);
+                    return Fxausd.toPips(symbol, takeProfit - entryPrice);
                 }
             } else if (takeProfit < entryPrice && stopLoss > entryPrice) {
                 if (high >= stopLoss && low <= takeProfit) {
                     double distSL = Math.abs(stopLoss - entryPrice);
                     double distTP = Math.abs(entryPrice - takeProfit);
-                    return distSL <= distTP ? toPips(stopLoss - entryPrice) : toPips(entryPrice - takeProfit);
+                    return distSL <= distTP ? Fxausd.toPips(symbol, stopLoss - entryPrice) : Fxausd.toPips(symbol, entryPrice - takeProfit);
                 } else if (high >= stopLoss) {
-                    return toPips(stopLoss - entryPrice);
+                    return Fxausd.toPips(symbol, stopLoss - entryPrice);
                 } else if (low <= takeProfit) {
-                    return toPips(entryPrice - takeProfit);
+                    return Fxausd.toPips(symbol, entryPrice - takeProfit);
                 }
             }
         }
@@ -393,13 +395,9 @@ public class Backtester {
         Fxausd.Candle last = data.get(Math.min(data.size() - 1, entryIndex + maxBars - 1));
         double exitPrice = last.close;
         if (entryPrice < exitPrice) {
-            return toPips(exitPrice - entryPrice);
+            return Fxausd.toPips(symbol, exitPrice - entryPrice);
         }
-        return toPips(entryPrice - exitPrice);
-    }
-
-    private static double toPips(double priceDifference) {
-        return priceDifference / 0.0001;
+        return Fxausd.toPips(symbol, entryPrice - exitPrice);
     }
 }
 
