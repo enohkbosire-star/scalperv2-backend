@@ -173,6 +173,11 @@ public class CloudAPI {
                     m.put("mlConfidence", rs.getDouble("confidence"));
                     m.put("signalStrength", rs.getDouble("strength"));
                     m.put("reason", rs.getString("reason"));
+                    m.put("status", rs.getString("status"));
+                    m.put("session", rs.getString("session"));
+                    m.put("type", rs.getString("type"));
+                    m.put("regime", rs.getString("session")); // Map session to regime for dashboard
+                    m.put("risk_reward", rs.getDouble("risk_reward"));
                     m.put("timestamp", rs.getTimestamp("timestamp") != null ? rs.getTimestamp("timestamp").getTime() : System.currentTimeMillis());
                     signals.add(m);
                 }
@@ -185,6 +190,37 @@ public class CloudAPI {
 
         get("/api/trades", (req, res) -> {
             return gson.toJson(new ArrayList<>(Fxausd.recentTradeRecords));
+        });
+
+        // =========================
+        // CANDLE DATA BRIDGE
+        // =========================
+        get("/candles", (req, res) -> {
+            String symbol = req.queryParams("symbol");
+            String timeframe = req.queryParams("timeframe");
+            String countStr = req.queryParams("count");
+            int count = (countStr != null) ? Integer.parseInt(countStr) : 100;
+            
+            String cloudKey = System.getenv("TWELVE_DATA_API_KEY");
+            if (cloudKey != null && !cloudKey.isBlank()) {
+                List<Fxausd.Candle> candles = Fxausd.fetchCloudCandles(symbol, count, timeframe, cloudKey);
+                return gson.toJson(candles);
+            }
+            return gson.toJson(Map.of("status", "error", "message", "Twelve Data API Key not configured on bridge"));
+        });
+
+        get("/api/candles", (req, res) -> {
+            String symbol = req.queryParams("symbol");
+            String timeframe = req.queryParams("timeframe");
+            String countStr = req.queryParams("count");
+            int count = (countStr != null) ? Integer.parseInt(countStr) : 100;
+            
+            String cloudKey = System.getenv("TWELVE_DATA_API_KEY");
+            if (cloudKey != null && !cloudKey.isBlank()) {
+                List<Fxausd.Candle> candles = Fxausd.fetchCloudCandles(symbol, count, timeframe, cloudKey);
+                return gson.toJson(candles);
+            }
+            return gson.toJson(Map.of("status", "error", "message", "Twelve Data API Key not configured on bridge"));
         });
 
         // =========================
@@ -790,6 +826,7 @@ public class CloudAPI {
             // Migrations: Ensure missing columns exist (for existing databases)
             st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS reason TEXT");
             st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS risk_reward DOUBLE PRECISION");
+            st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS status VARCHAR(20)");
             st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS session VARCHAR(20)");
             st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS type VARCHAR(20)");
             
