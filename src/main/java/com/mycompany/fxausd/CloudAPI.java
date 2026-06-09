@@ -68,7 +68,37 @@ public class CloudAPI {
             res.type("application/json"); 
         });
 
+        options("/*", (req, res) -> {
+            String accessControlRequestHeaders = req.headers("Access-Control-Request-Headers");
+            if (accessControlRequestHeaders != null) {
+                res.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+            }
+            String accessControlRequestMethod = req.headers("Access-Control-Request-Method");
+            if (accessControlRequestMethod != null) {
+                res.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+            }
+            return "OK";
+        });
+
         initDatabase();
+
+        // =========================
+        // MT5 BRIDGE COMPATIBILITY (Must be high priority)
+        // =========================
+        post("/order", (req, res) -> {
+            System.out.println("🤖 [MT5 Bridge] Received POST on /order: " + req.body());
+            return gson.toJson(Map.of("status", "success", "message", "Order received by CloudAPI bridge"));
+        });
+        get("/order", (req, res) -> {
+            return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /order is active (Use POST for orders)"));
+        });
+        post("/api/order", (req, res) -> {
+            System.out.println("🤖 [MT5 Bridge] Received POST on /api/order: " + req.body());
+            return gson.toJson(Map.of("status", "success", "message", "Order received by CloudAPI bridge"));
+        });
+        get("/api/order", (req, res) -> {
+            return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /api/order is active (Use POST for orders)"));
+        });
 
         // =========================
         // HEALTH CHECK & DASHBOARD
@@ -756,6 +786,17 @@ public class CloudAPI {
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(100) UNIQUE, name VARCHAR(100), phone VARCHAR(20), password VARCHAR(100), balance DOUBLE PRECISION DEFAULT 50, bot_balance DOUBLE PRECISION DEFAULT 0, is_admin BOOLEAN DEFAULT FALSE, is_approved BOOLEAN DEFAULT TRUE, community_status VARCHAR(20) DEFAULT 'none', profile_pic_url TEXT)");
             st.execute("CREATE TABLE IF NOT EXISTS signals (id SERIAL PRIMARY KEY, pair VARCHAR(20), action VARCHAR(10), entry_price DOUBLE PRECISION, tp DOUBLE PRECISION, sl DOUBLE PRECISION, confidence DOUBLE PRECISION, strength DOUBLE PRECISION, reason TEXT, risk_reward DOUBLE PRECISION, status VARCHAR(20), session VARCHAR(20), type VARCHAR(20), timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+
+            // Migrations: Ensure missing columns exist (for existing databases)
+            st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS reason TEXT");
+            st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS risk_reward DOUBLE PRECISION");
+            st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS session VARCHAR(20)");
+            st.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS type VARCHAR(20)");
+            
+            st.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS community_status VARCHAR(20) DEFAULT 'none'");
+            st.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_pic_url TEXT");
+            st.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_balance DOUBLE PRECISION DEFAULT 0");
+
             st.execute("CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, title TEXT, time VARCHAR(100), impact VARCHAR(20) DEFAULT 'Low', currency VARCHAR(10) DEFAULT 'USD', is_future BOOLEAN DEFAULT FALSE)");
             st.execute("CREATE TABLE IF NOT EXISTS feedbacks (id SERIAL PRIMARY KEY, email VARCHAR(100), feedback TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             st.execute("CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY, title VARCHAR(255), message TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");

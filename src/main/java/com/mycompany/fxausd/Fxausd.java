@@ -1409,8 +1409,8 @@ public class Fxausd {
                 double strength = calculateSignalStrength(candles, originalIndex, pred, prob, smcSignal.confidence);
 
                 // Calculate risk/reward with execution costs
-                double riskPips = Math.abs(smcSignal.entry - smcSignal.stopLoss) / 0.0001;
-                double rewardPips = Math.abs(smcSignal.takeProfit - smcSignal.entry) / 0.0001;
+                double riskPips = convertPriceDiffToPips(smcSignal.symbol, Math.abs(smcSignal.entry - smcSignal.stopLoss));
+                double rewardPips = convertPriceDiffToPips(smcSignal.symbol, Math.abs(smcSignal.takeProfit - smcSignal.entry));
                 double adjustedRiskPips = riskPips + executionCostPips;
                 double adjustedRewardPips = rewardPips - executionCostPips;
 
@@ -1539,7 +1539,7 @@ public class Fxausd {
         System.out.println("\n════════════════════════════════════════════════════════════");
         System.out.println("� RUNNING BACKTEST WITH TRANSACTION COSTS...");
         System.out.println("════════════════════════════════════════════════════════════");
-        Backtester.BacktestResult backtestResult = Backtester.runBacktest(candles, 80, 16);
+        Backtester.BacktestResult backtestResult = Backtester.runBacktest("EURUSD", candles, 80, 16);
         System.out.println(backtestResult);
 
         System.out.println("\n════════════════════════════════════════════════════════════");
@@ -3037,7 +3037,7 @@ public class Fxausd {
         }
     }
 
-    private static double convertPriceDiffToPips(String symbol, double priceDiff) {
+    public static double convertPriceDiffToPips(String symbol, double priceDiff) {
         String upper = symbol.toUpperCase();
         if (upper.endsWith("JPY")) {
             return priceDiff / 0.01;
@@ -3048,7 +3048,7 @@ public class Fxausd {
         return priceDiff / 0.0001;
     }
 
-    private static double convertPipsToPrice(String symbol, double pips) {
+    public static double convertPipsToPrice(String symbol, double pips) {
         String upper = symbol.toUpperCase();
         if (upper.endsWith("JPY")) {
             return pips * 0.01;
@@ -3075,12 +3075,21 @@ public class Fxausd {
         return generateTrendPullbackSignals(candles, symbol, liveTimeframe, false);
     }
 
-    private static double getTradeLotSize(double accountBalance, double riskPercent, double riskPips) {
+    public static double getPipValue(String symbol) {
+        if (symbol == null) return 10.0;
+        String upper = symbol.toUpperCase();
+        if (upper.contains("XAU") || upper.contains("GOLD")) {
+            return 1.0;
+        }
+        return 10.0;
+    }
+
+    private static double getTradeLotSize(double accountBalance, double riskPercent, double riskPips, String symbol) {
         if (riskPips <= 0) {
             return 0.01;
         }
         double riskUsd = accountBalance * riskPercent;
-        double lot = riskUsd / (riskPips * 10.0);
+        double lot = riskUsd / (riskPips * getPipValue(symbol));
         return Math.max(0.01, Math.min(2.0, Math.round(lot * 100.0) / 100.0));
     }
 
@@ -3639,11 +3648,18 @@ public class Fxausd {
         double pairMult = tradeDatabase.getPairPerformanceMult(symbol);
         mlProb *= pairMult;
 
-        double sl = Math.max(8.0, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
-        sl = Math.min(sl, 25.0); 
+        // Dynamic SL/TP based on pair volatility and structure
+        double maxSl = getPairStopLossPips(symbol);
+        double minSl = (symbol.equalsIgnoreCase("XAUUSD")) ? 25.0 : 8.0;
+        
+        double sl = Math.max(minSl, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
+        sl = Math.min(sl, maxSl); 
+        
+        // Elite signals target high R:R (1:5)
+        double tp = sl * 5.0;
 
         String type = strength >= 90 ? "AI QUANTUM SNIPER" : strength >= 80 ? "INSTITUTIONAL CORE AI" : "LIQUIDITY VOID AI";
-        signals.add(createEliteSignal(symbol, direction, price, sl, sl * 5.0, mlProb, 0.90, strength, type, direction.equals("BUY")));
+        signals.add(createEliteSignal(symbol, direction, price, sl, tp, mlProb, 0.90, strength, type, direction.equals("BUY")));
 
         System.out.println("🏦 [WORLD BANK LEVEL] Setup Executed: " + type + " for " + symbol + " " + direction + " Score=" + finalScore);
 
@@ -4537,12 +4553,12 @@ public class Fxausd {
         return sum / period;
     }
 
-    public static double toPips(double priceDifference) {
-        return priceDifference / 0.0001;
+    public static double toPips(String symbol, double priceDifference) {
+        return convertPriceDiffToPips(symbol, priceDifference);
     }
 
-    public static double pipsToUsd(double pips, double lotSize) {
-        return pips * 10.0 * lotSize;
+    public static double pipsToUsd(String symbol, double pips, double lotSize) {
+        return pips * getPipValue(symbol) * lotSize;
     }
 
     // ===============================
@@ -5013,7 +5029,7 @@ public class Fxausd {
             }
             candlesInTrade++;
             double currentClose = candle.close;
-            double currentPips = signal.direction.equals("BUY") ? toPips(currentClose - entryPrice) : toPips(entryPrice - currentClose);
+            double currentPips = signal.direction.equals("BUY") ? toPips(signal.symbol, currentClose - entryPrice) : toPips(signal.symbol, entryPrice - currentClose);
             profitPips = currentPips;
 
             if (!breakevenSet && currentPips >= riskPips * 1.0) {
@@ -5026,26 +5042,29 @@ public class Fxausd {
             }
 
             if (currentPips >= riskPips * 2.0) {
+                double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.5);
                 if (signal.direction.equals("BUY")) {
-                    stopLoss = Math.max(stopLoss, currentClose - (riskPips * 0.5 * 0.0001));
+                    stopLoss = Math.max(stopLoss, currentClose - buffer);
                 } else {
-                    stopLoss = Math.min(stopLoss, currentClose + (riskPips * 0.5 * 0.0001));
+                    stopLoss = Math.min(stopLoss, currentClose + buffer);
                 }
             }
 
             if (currentPips >= riskPips * 3.0) {
+                double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.25);
                 if (signal.direction.equals("BUY")) {
-                    stopLoss = Math.max(stopLoss, currentClose - (riskPips * 0.25 * 0.0001));
+                    stopLoss = Math.max(stopLoss, currentClose - buffer);
                 } else {
-                    stopLoss = Math.min(stopLoss, currentClose + (riskPips * 0.25 * 0.0001));
+                    stopLoss = Math.min(stopLoss, currentClose + buffer);
                 }
             }
 
             if (currentPips >= riskPips * 4.0) {
+                double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.10);
                 if (signal.direction.equals("BUY")) {
-                    stopLoss = Math.max(stopLoss, currentClose - (riskPips * 0.10 * 0.0001));
+                    stopLoss = Math.max(stopLoss, currentClose - buffer);
                 } else {
-                    stopLoss = Math.min(stopLoss, currentClose + (riskPips * 0.10 * 0.0001));
+                    stopLoss = Math.min(stopLoss, currentClose + buffer);
                 }
             }
 
@@ -5076,8 +5095,8 @@ public class Fxausd {
             exitPrice = price;
             exitReason = reason;
             status = "CLOSED";
-            profitPips = signal.direction.equals("BUY") ? toPips(price - entryPrice) : toPips(entryPrice - price);
-            pnlUsd = profitPips * lotSize * 10.0;
+            profitPips = signal.direction.equals("BUY") ? toPips(signal.symbol, price - entryPrice) : toPips(signal.symbol, entryPrice - price);
+            pnlUsd = profitPips * lotSize * getPipValue(signal.symbol);
         }
     }
 
@@ -5129,7 +5148,7 @@ public class Fxausd {
             this.exitReason = trade.exitReason;
             this.status = trade.status;
             this.duration = trade.candlesInTrade;
-            this.pnlUsd = trade.profitPips * trade.lotSize * 10.0;
+            this.pnlUsd = trade.profitPips * trade.lotSize * getPipValue(trade.signal.symbol);
             this.session = signal.session;
             this.setupType = signal.setupType;
             this.trendAligned = signal.trendAligned;
@@ -5149,7 +5168,7 @@ public class Fxausd {
             this.riskPips = signal.riskAmount;
             this.rewardPips = signal.rewardAmount;
             this.riskRewardRatio = signal.rewardAmount > 0 ? signal.rewardAmount / Math.max(1.0, signal.riskAmount) : 0.0;
-            this.lotSize = Math.max(0.01, Math.min(1.0, DEFAULT_ACCOUNT_BALANCE * DEFAULT_RISK_PERCENT / Math.max(1.0, signal.riskAmount * 10.0)));
+            this.lotSize = Math.max(0.01, Math.min(1.0, DEFAULT_ACCOUNT_BALANCE * DEFAULT_RISK_PERCENT / Math.max(1.0, signal.riskAmount * getPipValue(signal.symbol))));
             this.regime = signal.regime;
             this.sourceIndex = signal.sourceIndex;
             this.resultPips = 0;
@@ -5249,14 +5268,14 @@ public class Fxausd {
                     System.out.println("⚠️ Invalid risk amount, skipping trade.");
                     continue;
                 }
-                double lotSize = Math.max(0.01, Math.min(1.0, riskPerTradeUsd / (signal.riskAmount * 10.0)));
+                double lotSize = Math.max(0.01, Math.min(1.0, riskPerTradeUsd / (signal.riskAmount * getPipValue(signal.symbol))));
                 if (lotSize <= 0) {
                     System.out.println("⚠️ Position sizing failed, skipping trade.");
                     continue;
                 }
                 int entryIndex = Math.min(signal.sourceIndex + 1, candles.size() - 1);
                 Candle entryCandle = candles.get(entryIndex);
-                double entryPrice = entryCandle.open + (signal.direction.equals("BUY") ? (spreadPips * 0.0001) : -(spreadPips * 0.0001));
+                double entryPrice = entryCandle.open + (signal.direction.equals("BUY") ? convertPipsToPrice(signal.symbol, spreadPips) : -convertPipsToPrice(signal.symbol, spreadPips));
                 double adjustedStopLoss = signal.stopLoss + (entryPrice - signal.entry);
                 double adjustedTakeProfit = signal.takeProfit + (entryPrice - signal.entry);
                 boolean sent = sendSignalToMT5(signal);
@@ -6008,8 +6027,8 @@ public class Fxausd {
         }
         int entryIndex = Math.min(signalIndex + 1, data.size() - 1);
         double entryPrice = data.get(entryIndex).open;
-        double spread = spreadPips * 0.0001;
-        double slippage = slippagePips * 0.0001;
+        double spread = convertPipsToPrice(signal.symbol, spreadPips);
+        double slippage = convertPipsToPrice(signal.symbol, slippagePips);
 
         if ("BUY".equals(signal.direction)) {
             entryPrice += spread + slippage;
@@ -6027,33 +6046,33 @@ public class Fxausd {
 
             if ("BUY".equals(signal.direction)) {
                 if (low <= stopLoss && high >= takeProfit) {
-                    return toPips(stopLoss - entryPrice); // conservative fill
+                    return toPips(signal.symbol, stopLoss - entryPrice); // conservative fill
                 }
                 if (low <= stopLoss) {
-                    return toPips(stopLoss - entryPrice);
+                    return toPips(signal.symbol, stopLoss - entryPrice);
                 }
                 if (high >= takeProfit) {
-                    return toPips(takeProfit - entryPrice);
+                    return toPips(signal.symbol, takeProfit - entryPrice);
                 }
             } else {
                 if (high >= stopLoss && low <= takeProfit) {
-                    return toPips(entryPrice - stopLoss); // conservative fill
+                    return toPips(signal.symbol, entryPrice - stopLoss); // conservative fill
                 }
                 if (high >= stopLoss) {
-                    return toPips(entryPrice - stopLoss);
+                    return toPips(signal.symbol, entryPrice - stopLoss);
                 }
                 if (low <= takeProfit) {
-                    return toPips(entryPrice - takeProfit);
+                    return toPips(signal.symbol, entryPrice - takeProfit);
                 }
             }
         }
 
         int exitIndex = Math.min(entryIndex + maxBars, data.size() - 1);
         double exitPrice = data.get(exitIndex).close;
-        return "BUY".equals(signal.direction) ? toPips(exitPrice - entryPrice) : toPips(entryPrice - exitPrice);
+        return "BUY".equals(signal.direction) ? toPips(signal.symbol, exitPrice - entryPrice) : toPips(signal.symbol, entryPrice - exitPrice);
     }
 
-    public static double simulateTradePips(java.util.List<Candle> data, int index, int pred,
+    public static double simulateTradePips(java.util.List<Candle> data, String symbol, int index, int pred,
             double spreadPips, double slippagePips, int maxBars) {
         if (index + 1 >= data.size()) {
             return 0;
@@ -6061,8 +6080,8 @@ public class Fxausd {
         int entryIndex = Math.min(index + 1, data.size() - 1);
         double entry = data.get(entryIndex).open;
         double atr = calculateATR(data, index, 14);
-        double spread = spreadPips * 0.0001;
-        double slippage = slippagePips * 0.0001;
+        double spread = convertPipsToPrice(symbol, spreadPips);
+        double slippage = convertPipsToPrice(symbol, slippagePips);
 
         if (pred == 1) {
             entry += spread + slippage;
@@ -6079,24 +6098,24 @@ public class Fxausd {
 
             if (pred == 1) {
                 if (low <= stopLoss) {
-                    return toPips(stopLoss - entry);
+                    return toPips(symbol, stopLoss - entry);
                 }
                 if (high >= takeProfit) {
-                    return toPips(takeProfit - entry);
+                    return toPips(symbol, takeProfit - entry);
                 }
             } else {
                 if (high >= stopLoss) {
-                    return toPips(entry - stopLoss);
+                    return toPips(symbol, entry - stopLoss);
                 }
                 if (low <= takeProfit) {
-                    return toPips(entry - takeProfit);
+                    return toPips(symbol, entry - takeProfit);
                 }
             }
         }
 
         int exitIndex = Math.min(entryIndex + maxBars, data.size() - 1);
         double exitPrice = data.get(exitIndex).close;
-        return pred == 1 ? toPips(exitPrice - entry) : toPips(entry - exitPrice);
+        return pred == 1 ? toPips(symbol, exitPrice - entry) : toPips(symbol, entry - exitPrice);
     }
 
     public static double calculateSharpe(java.util.List<Double> returns) {
