@@ -1044,6 +1044,33 @@ public class Fxausd {
 
         if (liveMode) {
             System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
+            if (ForexBot.isForexMarketClosed()) {
+                System.out.println("⚠️ Forex market is currently closed. Live signal generation and dispatch are suspended until market reopens.");
+                startDashboardServer();
+                startForexBotServer();
+                return;
+            }
+            if (!isWithinActiveForexSession()) {
+                System.out.println("⚠️ Outside active FX session window. Live signals are suspended until next London/New York session.");
+                startDashboardServer();
+                startForexBotServer();
+                return;
+            }
+            if (MT5_ENDPOINT != null && !MT5_ENDPOINT.isEmpty()) {
+                System.out.println("▶ MT5 endpoint: " + MT5_ENDPOINT);
+            } else {
+                System.out.println("▶ MT5 endpoint is not set, using default: " + DEFAULT_MT5_ENDPOINT);
+            }
+            if (crtMode || comboMode) {
+                System.out.println("▶ Legacy CRT/combo flags ignored; using A+ SMC master trigger execution path.");
+                crtMode = false;
+                comboMode = false;
+            }
+            System.out.println("▶ Live execution uses A+ master trend trigger + liquidity confirmation + ML confirmation.");
+            if (debugMode) {
+                System.out.println("🔍 LIVE DEBUG MODE ENABLED: previewing only high-confidence A+ SMC signals before MT5 dispatch.");
+            }
+            System.out.println("▶ To run the MT5 signal receiver server only, use: java ... Fxausd server");
             
             while (true) {
                 cloudCache.clear();
@@ -1174,38 +1201,6 @@ public class Fxausd {
             return;
         }
 
-        if (liveMode) {
-            System.out.println("🚀 LIVE TRADING MODE ENABLED");
-            if (ForexBot.isForexMarketClosed()) {
-                System.out.println("⚠️ Forex market is currently closed. Live signal generation and dispatch are suspended until market reopens.");
-                startDashboardServer();
-                startForexBotServer();
-                return;
-            }
-
-            if (!isWithinActiveForexSession()) {
-                System.out.println("⚠️ Outside active FX session window. Live signals are suspended until next London/New York session.");
-                startDashboardServer();
-                startForexBotServer();
-                return;
-            }
-
-            if (MT5_ENDPOINT != null && !MT5_ENDPOINT.isEmpty()) {
-                System.out.println("▶ MT5 endpoint: " + MT5_ENDPOINT);
-            } else {
-                System.out.println("▶ MT5 endpoint is not set, using default: " + DEFAULT_MT5_ENDPOINT);
-            }
-            if (crtMode || comboMode) {
-                System.out.println("▶ Legacy CRT/combo flags ignored; using A+ SMC master trigger execution path.");
-                crtMode = false;
-                comboMode = false;
-            }
-            System.out.println("▶ Live execution uses A+ master trend trigger + liquidity confirmation + ML confirmation.");
-            if (debugMode) {
-                System.out.println("🔍 LIVE DEBUG MODE ENABLED: previewing only high-confidence A+ SMC signals before MT5 dispatch.");
-            }
-            System.out.println("▶ To run the MT5 signal receiver server only, use: java ... Fxausd server");
-        }
         if (serverMode) {
             System.out.println("🚀 Starting MT5 signal receiver server only...");
             startForexBotServer();
@@ -3511,14 +3506,14 @@ public class Fxausd {
         
         // Sentiment Analysis logic
         double rsi = calculateRSI(candles, last, 14);
-        double adx = calculateATR(candles, last, 14); 
+        double atr = calculateATR(candles, last, 14);
         
         currentIntel.bos = bos != 0;
         currentIntel.choch = choch != 0;
         currentIntel.liquidityScore = liq;
         currentIntel.imbalanceRatio = imbalance;
         currentIntel.sentimentScore = orderFlow;
-        currentIntel.volatility = (adx / candles.get(last).close) * 100;
+        currentIntel.volatility = (atr / candles.get(last).close) * 100;
         currentIntel.trendStrength = Math.abs(calculateTrendSlope(candles, last, 20)) * 1000;
         currentIntel.volumeIntensity = candles.get(last).volume / Math.max(1, calculateAverageVolume(candles, last, 20));
         currentIntel.institutionalDisplacement = calculateInstitutionalDisplacement(candles, last);
@@ -3585,11 +3580,13 @@ public class Fxausd {
         // --- MICRO-STRUCTURE & LIQUIDITY ---
         int bos = detectBOS(candles, last);
         int choch = detectCHoCH(candles, last);
-        boolean sweep = detectLiquiditySweep(candles, last);
+        int sweepSignal = detectLiquiditySweepDirection(candles, last);
+        boolean sweepBuy = sweepSignal == 1;
+        boolean sweepSell = sweepSignal == -1;
         double orderFlow = calculateOrderFlowIntensity(candles, last);
         double vwap = calculateVWAP(candles, last, 20);
         
-        // --- UPGRADED SCORING SYSTEM (Mistake #1, #2, #5, #7) ---
+        // --- UPGRADED SCORING SYSTEM ---
         int buyScore = 0;
         int sellScore = 0;
         StringBuilder buyAudit = new StringBuilder("   [BUY Audit] ");
@@ -3599,21 +3596,23 @@ public class Fxausd {
         if (h4.trend.equals("UP")) { buyScore += 25; buyAudit.append("H4:PASS "); } else { buyAudit.append("H4:FAIL "); }
         if (h4.trend.equals("DOWN")) { sellScore += 25; sellAudit.append("H4:PASS "); } else { sellAudit.append("H4:FAIL "); }
 
-        // H1 Trend (20 pts)
-        if (h1.trend.equals("UP") || h1.trend.equals("FLAT")) { buyScore += 20; buyAudit.append("H1:PASS "); } else { buyAudit.append("H1:FAIL "); }
-        if (h1.trend.equals("DOWN") || h1.trend.equals("FLAT")) { sellScore += 20; sellAudit.append("H1:PASS "); } else { sellAudit.append("H1:FAIL "); }
+        // H1 Trend (20 pts) - only directional momentum passes
+        if (h1.trend.equals("UP")) { buyScore += 20; buyAudit.append("H1:PASS "); } else { buyAudit.append("H1:FAIL "); }
+        if (h1.trend.equals("DOWN")) { sellScore += 20; sellAudit.append("H1:PASS "); } else { sellAudit.append("H1:FAIL "); }
 
-        // Local Trigger (BOS/CHoCH/Sweep) (30 pts - Non-blocking Mistake #2)
-        if (bos == 1 || choch == 1 || sweep) { buyScore += 30; buyAudit.append("TRIG:PASS "); } else { buyAudit.append("TRIG:FAIL "); }
-        if (bos == -1 || choch == -1 || sweep) { sellScore += 30; sellAudit.append("TRIG:PASS "); } else { sellAudit.append("TRIG:FAIL "); }
+        // Local Trigger (BOS/CHoCH/Sweep)
+        boolean buyTrigger = bos == 1 || choch == 1 || sweepBuy;
+        boolean sellTrigger = bos == -1 || choch == -1 || sweepSell;
+        if (buyTrigger) { buyScore += 30; buyAudit.append("TRIG:PASS "); } else { buyAudit.append("TRIG:FAIL "); }
+        if (sellTrigger) { sellScore += 30; sellAudit.append("TRIG:PASS "); } else { sellAudit.append("TRIG:FAIL "); }
 
         // VWAP Confirmation (10 pts)
         if (price > vwap) { buyScore += 10; buyAudit.append("VWAP:PASS "); } else { buyAudit.append("VWAP:FAIL "); }
         if (price < vwap) { sellScore += 10; sellAudit.append("VWAP:PASS "); } else { sellAudit.append("VWAP:FAIL "); }
 
-        // Order Flow Confirmation (Mistake #4: 0.52/0.48)
-        if (orderFlow > 0.52) { buyScore += 10; buyAudit.append("FLOW:PASS "); } else { buyAudit.append("FLOW:FAIL "); }
-        if (orderFlow < 0.48) { sellScore += 10; sellAudit.append("FLOW:PASS "); } else { sellAudit.append("FLOW:FAIL "); }
+        // Order Flow Confirmation
+        if (orderFlow > 0.55) { buyScore += 10; buyAudit.append("FLOW:PASS "); } else { buyAudit.append("FLOW:FAIL "); }
+        if (orderFlow < 0.45) { sellScore += 10; sellAudit.append("FLOW:PASS "); } else { sellAudit.append("FLOW:FAIL "); }
 
         // Killzone Bonus (+15 Mistake #5)
         if (isWithinKillzone()) {
@@ -3632,7 +3631,14 @@ public class Fxausd {
         }
 
         int finalScore = Math.max(buyScore, sellScore);
-        String direction = (buyScore >= 70 && buyScore >= sellScore) ? "BUY" : (sellScore >= 70) ? "SELL" : "NONE";
+        String direction;
+        if (buyScore >= 75 && buyScore - sellScore >= 10) {
+            direction = "BUY";
+        } else if (sellScore >= 75 && sellScore - buyScore >= 10) {
+            direction = "SELL";
+        } else {
+            direction = "NONE";
+        }
         
         System.out.println(buyAudit.toString() + " -> " + buyScore);
         System.out.println(sellAudit.toString() + " -> " + sellScore);
@@ -3699,29 +3705,28 @@ public class Fxausd {
 
 
     private static boolean detectLiquiditySweep(java.util.List<Candle> candles, int index) {
-        if (index < 30) return false;
+        return detectLiquiditySweepDirection(candles, index) != 0;
+    }
+
+    private static int detectLiquiditySweepDirection(java.util.List<Candle> candles, int index) {
+        if (index < 30) return 0;
         double atr = calculateATR(candles, index, 14);
         double recentHigh = getRecentHigh(candles, index - 20, index - 1);
         double recentLow = getRecentLow(candles, index - 20, index - 1);
         Candle current = candles.get(index);
         double avgVolume = calculateAverageVolume(candles, index - 1, 20);
         
-        // Exact solution: Require sweepDistance > ATR * 0.25 and volume > avgVolume * 1.5
         boolean volumeSpike = current.volume > avgVolume * 1.5;
         
-        // Bullish sweep: price dipped below recent low and snapped back
         if (current.low < recentLow && current.close > recentLow) {
             double sweepDistance = recentLow - current.low;
-            if (sweepDistance > atr * 0.25 && volumeSpike) return true;
+            if (sweepDistance > atr * 0.25 && volumeSpike) return 1;
         }
-        
-        // Bearish sweep: price poked above recent high and closed below
         if (current.high > recentHigh && current.close < recentHigh) {
             double sweepDistance = current.high - recentHigh;
-            if (sweepDistance > atr * 0.25 && volumeSpike) return true;
+            if (sweepDistance > atr * 0.25 && volumeSpike) return -1;
         }
-        
-        return false;
+        return 0;
     }
 
     private static java.util.List<TradeSignal> generateLiveSignalsForStrategy(java.util.List<Candle> candles, String symbol, String liveTimeframe, String strategy) {
@@ -4173,12 +4178,12 @@ public class Fxausd {
 
         if (breakoutBuy) {
             double entry = currentPrice;
-            double stopLoss = recentHigh - atr * 0.1;
             double stopLossDistance = Math.max(atr * 1.5, convertPipsToPrice(symbol, getPairStopLossPips(symbol)));
+            double stopLoss = entry - stopLossDistance;
             double takeProfit = entry + stopLossDistance * 2.0;
             double strength = Math.min(100.0, 55.0 + (currentPrice - recentHigh) / Math.max(atr, 1e-6) * 20.0 + (currentRsi - BREAKOUT_RSI_MIN) * 0.8);
             String reason = String.format("Breakout BUY: cleared recent high, H4/H1=%s, RSI=%.2f", htf.trend, currentRsi);
-            signals.add(new TradeSignal(symbol, "BUY", entry, stopLoss, takeProfit, 0.75, 0.75, strength, reason, atr, atr * 2.0));
+            signals.add(new TradeSignal(symbol, "BUY", entry, stopLoss, takeProfit, 0.75, 0.75, strength, reason, stopLossDistance, stopLossDistance * 2.0));
         }
         if (breakoutSell) {
             double entry = currentPrice;
@@ -4281,7 +4286,7 @@ public class Fxausd {
             case "M15":
                 return "M30";
             case "M30":
-                return "M15";
+                return "H1";
             case "H1":
                 return "H4";
             case "H2":
@@ -4403,10 +4408,10 @@ public class Fxausd {
                 return 1;
             }
             if (high >= stopLossSell) {
-                return 1;
+                return 0;
             }
             if (low <= takeProfitSell) {
-                return 0;
+                return 1;
             }
         }
         return -1;
@@ -4416,6 +4421,8 @@ public class Fxausd {
     // RSI
     // ===============================
     public static double calculateRSI(java.util.List<Candle> data, int index, int period) {
+
+        if (index < period) return 50.0;
 
         double gain = 0, loss = 0;
 
@@ -4816,13 +4823,14 @@ public class Fxausd {
         }
 
         double currentClose = data.get(index).close;
+        double avgVol = calculateAverageVolume(data, index, 20);
         double flipStrength = 0.0;
 
         // Resistance becomes support when price breaks above and pulls back
-        if (currentClose > highestHigh && data.get(index).volume > 1000) {
+        if (currentClose > highestHigh && data.get(index).volume > avgVol * 0.8) {
             flipStrength = 0.8; // Strong breakout above resistance
         } // Support becomes resistance when price breaks below
-        else if (currentClose < lowestLow && data.get(index).volume > 1000) {
+        else if (currentClose < lowestLow && data.get(index).volume > avgVol * 0.8) {
             flipStrength = -0.8; // Strong breakdown below support
         }
 
