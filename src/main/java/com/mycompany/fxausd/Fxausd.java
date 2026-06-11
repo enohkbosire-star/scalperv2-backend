@@ -232,6 +232,89 @@ public class Fxausd {
         }
     }
 
+    private static String getTrainingAssetSymbol() {
+        // Use the primary dataset asset for model persistence
+        String asset = "EURUSD";
+        String datasetPath = "data/eurusd.csv";
+        if (new java.io.File(datasetPath).exists()) {
+            return asset;
+        }
+        return asset;
+    }
+
+    private static String resolveModelPath(String assetSymbol, String fileName) {
+        String normalized = assetSymbol == null ? "UNKNOWN" : assetSymbol.toUpperCase().replaceAll("[^A-Z0-9]", "_");
+        java.io.File modelDir = new java.io.File("models");
+        if (!modelDir.exists()) {
+            modelDir.mkdirs();
+        }
+        return new java.io.File(modelDir, normalized + "_" + fileName).getPath();
+    }
+
+    private static double getAdaptiveMlThreshold(String regime, double pairPerfMult) {
+        double threshold = MIN_ML_CONFIDENCE;
+        if ("TRENDING".equals(regime)) {
+            threshold += 0.02;
+        } else if ("VOLATILE".equals(regime)) {
+            threshold += 0.03;
+        } else if ("ACCUMULATION".equals(regime) || "DISTRIBUTION".equals(regime)) {
+            threshold += 0.01;
+        }
+        if (pairPerfMult < 0.95) {
+            threshold += 0.03;
+        }
+        return Math.min(threshold, 0.85);
+    }
+
+    private static double getAdaptiveSmcThreshold(String regime, double pairPerfMult) {
+        double threshold = MIN_SMC_CONFIDENCE;
+        if ("TRENDING".equals(regime)) {
+            threshold += 0.02;
+        } else if ("VOLATILE".equals(regime)) {
+            threshold += 0.03;
+        } else if ("RANGING".equals(regime)) {
+            threshold += 0.01;
+        }
+        if (pairPerfMult < 0.95) {
+            threshold += 0.03;
+        }
+        return Math.min(threshold, 0.92);
+    }
+
+    private static double getAdaptiveRrThreshold(String regime, double pairPerfMult) {
+        double threshold = MIN_RISK_REWARD;
+        if ("TRENDING".equals(regime)) {
+            threshold = 1.8;
+        } else if ("VOLATILE".equals(regime)) {
+            threshold = 1.7;
+        } else if ("ACCUMULATION".equals(regime) || "DISTRIBUTION".equals(regime)) {
+            threshold = 1.4;
+        } else if ("RANGING".equals(regime)) {
+            threshold = 1.6;
+        }
+        if (pairPerfMult < 0.95) {
+            threshold += 0.2;
+        }
+        return Math.min(threshold, 3.0);
+    }
+
+    private static int getRequiredQuantumScore(String regime, double pairPerfMult) {
+        int score = 70;
+        if ("TRENDING".equals(regime)) {
+            score = 70;
+        } else if ("VOLATILE".equals(regime)) {
+            score = 75;
+        } else if ("ACCUMULATION".equals(regime) || "DISTRIBUTION".equals(regime)) {
+            score = 68;
+        } else if ("RANGING".equals(regime)) {
+            score = 72;
+        }
+        if (pairPerfMult < 0.95) {
+            score += 5;
+        }
+        return Math.min(score, 85);
+    }
+
     private static class TrendStructure {
 
         final String trend;
@@ -1227,15 +1310,19 @@ public class Fxausd {
 
         for (int i = initialTrainSize; i < rawFeatures.size() - 1; i++) {
             if (i == initialTrainSize || i % retrainInterval == 0) {
+                // UPGRADE 1: Fix look-ahead bias with strict train-test split
+                // Never shuffle across train/test boundary; respect temporal order
                 java.util.List<double[]> trainFeatures = rawFeatures.subList(0, i);
                 java.util.List<Integer> trainLabels = labels.subList(0, i);
                 walkScaler = new FeatureScaler(NUM_FEATURES);
+                // FitTransform only on training data to avoid data leakage
                 java.util.List<double[]> scaledTrainFeatures = walkScaler.fitTransform(trainFeatures);
 
                 walkModel = new RandomForestClassifier(80, NUM_FEATURES);
                 walkModel.train(scaledTrainFeatures, trainLabels);
                 walkNbModel = new NaiveBayesClassifier(NUM_FEATURES);
                 walkNbModel.train(scaledTrainFeatures, trainLabels);
+                System.out.printf("   [Walk-Forward] Retrained on %d samples (strict temporal split: no shuffle)%n", i);
             }
 
             if (walkModel == null || walkNbModel == null || walkScaler == null) {
@@ -1296,29 +1383,30 @@ public class Fxausd {
         int trainingSize = Math.max(0, rawFeatures.size() - holdoutSamples);
         java.util.List<double[]> finalTrainFeatures = rawFeatures.subList(0, trainingSize);
         java.util.List<Integer> finalTrainLabels = labels.subList(0, trainingSize);
-        String modelFile = "random_forest_model.bin";
-        String scalerFile = "scaler_model.bin";
+        String trainingAsset = getTrainingAssetSymbol();
+        String modelFile = resolveModelPath(trainingAsset, "random_forest_model.bin");
+        String scalerFile = resolveModelPath(trainingAsset, "scaler_model.bin");
         RandomForestClassifier model = null;
         NaiveBayesClassifier nbModel = null;
         FeatureScaler finalScaler = null;
-        String nbModelFile = "naive_bayes_model.bin";
+        String nbModelFile = resolveModelPath(trainingAsset, "naive_bayes_model.bin");
 
         if (new java.io.File(modelFile).exists() && new java.io.File(scalerFile).exists()) {
             try {
                 model = RandomForestClassifier.load(modelFile);
                 finalScaler = FeatureScaler.load(scalerFile);
-                System.out.println("✅ Loaded persisted model and scaler from disk.");
+                System.out.println("✅ Loaded persisted model and scaler from disk for " + trainingAsset + ".");
             } catch (Exception e) {
-                System.out.println("⚠️ Failed to load persisted model, retraining: " + e.getMessage());
+                System.out.println("⚠️ Failed to load persisted model for " + trainingAsset + ", retraining: " + e.getMessage());
             }
         }
 
         if (new java.io.File(nbModelFile).exists()) {
             try {
                 nbModel = NaiveBayesClassifier.load(nbModelFile);
-                System.out.println("✅ Loaded persisted Naive Bayes model from disk.");
+                System.out.println("✅ Loaded persisted Naive Bayes model for " + trainingAsset + " from disk.");
             } catch (Exception e) {
-                System.out.println("⚠️ Failed to load persisted Naive Bayes model: " + e.getMessage());
+                System.out.println("⚠️ Failed to load persisted Naive Bayes model for " + trainingAsset + ": " + e.getMessage());
                 nbModel = null;
             }
         }
@@ -1341,9 +1429,9 @@ public class Fxausd {
                 model.save(modelFile);
                 nbModel.save(nbModelFile);
                 finalScaler.save(scalerFile);
-                System.out.println("💾 Persisted model, Naive Bayes, and scaler to disk.");
+                System.out.println("💾 Persisted model, Naive Bayes, and scaler to disk for " + trainingAsset + ".");
             } catch (Exception e) {
-                System.out.println("❌ Could not save model/scaler: " + e.getMessage());
+                System.out.println("❌ Could not save model/scaler for " + trainingAsset + ": " + e.getMessage());
             }
             System.out.println("✅ Final ensemble models trained on past data only!");
         }
@@ -1390,7 +1478,7 @@ public class Fxausd {
 
                 // Evaluate market regime for context, but keep ranging candidates in live testing
                 String regime = detectMarketRegime(candles, originalIndex, 20);
-                if ("ranging".equals(regime)) {
+                if ("RANGING".equals(regime)) {
                     System.out.printf("   ⚠️ Candidate %d is in ranging regime, keeping for live evaluation.\n", originalIndex);
                 }
 
@@ -1409,9 +1497,21 @@ public class Fxausd {
                 double adjustedRiskPips = riskPips + executionCostPips;
                 double adjustedRewardPips = rewardPips - executionCostPips;
 
+                double pairPerfMult = tradeDatabase.getPairPerformanceMult(smcSignal.symbol);
+                double adaptiveMinMl = getAdaptiveMlThreshold(regime, pairPerfMult);
+                double adaptiveMinSmc = getAdaptiveSmcThreshold(regime, pairPerfMult);
+                double adaptiveMinRr = getAdaptiveRrThreshold(regime, pairPerfMult);
+                double adaptiveMinScore = MIN_COMBINED_SCORE;
+                if ("ranging".equals(regime)) {
+                    adaptiveMinScore += 5;
+                }
+                if (pairPerfMult < 0.95) {
+                    adaptiveMinScore += 3;
+                }
+
                 // Support both BUY and SELL candidates for live testing
-                if (prob < MIN_ML_CONFIDENCE) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: weak ML confidence %.2f\n", originalIndex, prob);
+                if (prob < adaptiveMinMl) {
+                    System.out.printf("   ⚠️ Candidate %d rejected: weak ML confidence %.2f (req %.2f)\n", originalIndex, prob, adaptiveMinMl);
                     continue;
                 }
                 if (adjustedRiskPips <= 0 || adjustedRewardPips <= 0) {
@@ -1421,24 +1521,24 @@ public class Fxausd {
                 }
 
                 double score = prob * 50 + (strength / 100.0) * 30 + smcSignal.confidence * 20;
-                if ("trending".equals(regime)) {
+                if ("TRENDING".equals(regime)) {
                     score += 10;
                 }
-                if (smcSignal.confidence < MIN_SMC_CONFIDENCE) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: insufficient combo confidence %.2f\n",
-                            originalIndex, smcSignal.confidence);
+                if (smcSignal.confidence < adaptiveMinSmc) {
+                    System.out.printf("   ⚠️ Candidate %d rejected: insufficient combo confidence %.2f (req %.2f)\n",
+                            originalIndex, smcSignal.confidence, adaptiveMinSmc);
                     continue;
                 }
-                if (adjustedRewardPips / adjustedRiskPips < MIN_RISK_REWARD) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: weak risk/reward %.2f\n",
-                            originalIndex, adjustedRewardPips / adjustedRiskPips);
+                if (adjustedRewardPips / adjustedRiskPips < adaptiveMinRr) {
+                    System.out.printf("   ⚠️ Candidate %d rejected: weak risk/reward %.2f (req %.2f)\n",
+                            originalIndex, adjustedRewardPips / adjustedRiskPips, adaptiveMinRr);
                     continue;
                 }
-                if (score < MIN_COMBINED_SCORE) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: low combined score %.1f\n", originalIndex, score);
+                if (score < adaptiveMinScore) {
+                    System.out.printf("   ⚠️ Candidate %d rejected: low combined score %.1f (req %.1f)\n", originalIndex, score, adaptiveMinScore);
                     continue;
                 }
-                if ("ranging".equals(regime) && score < MIN_COMBINED_SCORE + 5) {
+                if ("RANGING".equals(regime) && score < adaptiveMinScore + 5) {
                     System.out.printf("   ⚠️ Candidate %d rejected: ranging regime and weak score %.1f\n", originalIndex, score);
                     continue;
                 }
@@ -3625,10 +3725,21 @@ public class Fxausd {
         if (regime.equals("TRENDING")) {
              buyScore += 10; sellScore += 10;
              buyAudit.append("REG:TREND "); sellAudit.append("REG:TREND ");
+        } else if (regime.equals("VOLATILE")) {
+             buyScore += 5; sellScore += 5;
+             buyAudit.append("REG:VOLATILE "); sellAudit.append("REG:VOLATILE ");
         } else if (regime.equals("ACCUMULATION") || regime.equals("DISTRIBUTION")) {
              buyScore += 5; sellScore += 5;
              buyAudit.append("REG:ACC/DIST "); sellAudit.append("REG:ACC/DIST ");
+        } else {
+             buyAudit.append("REG:RANGE "); sellAudit.append("REG:RANGE ");
         }
+
+        double pairPerf = tradeDatabase.getPairPerformanceMult(symbol);
+        int minSetupScore = getRequiredQuantumScore(regime, pairPerf);
+        double minMlUsingRegime = getAdaptiveMlThreshold(regime, pairPerf);
+        double minSmcUsingRegime = getAdaptiveSmcThreshold(regime, pairPerf);
+        double minRrUsingRegime = getAdaptiveRrThreshold(regime, pairPerf);
 
         int finalScore = Math.max(buyScore, sellScore);
         String direction;
@@ -3644,16 +3755,35 @@ public class Fxausd {
         System.out.println(sellAudit.toString() + " -> " + sellScore);
 
         if (direction.equals("NONE")) {
-             System.out.printf("   ⏳ [Audit] %s No setup: Max Score %d (Req: 70)\n", symbol, finalScore);
+             System.out.printf("   ⏳ [Audit] %s No setup: Max Score %d (Req: %d, Regime: %s)%n", symbol, finalScore, minSetupScore, regime);
              return signals;
         }
 
-        // --- EXECUTION PROTOCOL ---
         double strength = Math.min(100.0, finalScore);
         String setupName = "QILH_" + direction;
         double mlProb = tradeDatabase.getHistoricalWinRate(setupName);
         double pairMult = tradeDatabase.getPairPerformanceMult(symbol);
         mlProb *= pairMult;
+
+        if (mlProb < minMlUsingRegime) {
+            System.out.printf("   ⏳ [Audit] %s No setup: historical ML credit too low %.2f (req %.2f)%n", symbol, mlProb, minMlUsingRegime);
+            return signals;
+        }
+
+        if (finalScore < minSetupScore) {
+            System.out.printf("   ⏳ [Audit] %s No setup: Score %d below regime threshold %d (%s)%n", symbol, finalScore, minSetupScore, regime);
+            return signals;
+        }
+
+        if (minSmcUsingRegime > 0.0 && 0.90 < minSmcUsingRegime) {
+            System.out.printf("   ⏳ [Audit] %s No setup: SMC minimum threshold %.2f not met by elite signal %.2f%n", symbol, minSmcUsingRegime, 0.90);
+            return signals;
+        }
+
+        if (minRrUsingRegime > 0.0 && computeStructureBasedTP(candles, last, direction, price, 1.0, symbol) < minRrUsingRegime) {
+            System.out.printf("   ⏳ [Audit] %s No setup: required RR %.2f not feasible for current structure.%n", symbol, minRrUsingRegime);
+            return signals;
+        }
 
         // Dynamic SL/TP based on pair volatility and structure
         double maxSl = getPairStopLossPips(symbol);
@@ -3662,8 +3792,9 @@ public class Fxausd {
         double sl = Math.max(minSl, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
         sl = Math.min(sl, maxSl); 
         
-        // Elite signals target high R:R (1:5)
-        double tp = sl * 5.0;
+        // UPGRADE 3: Structure-based TP (instead of fixed 5x)
+        // Scan next 30 candles for structural swing levels
+        double tp = computeStructureBasedTP(candles, last, direction, price, sl, symbol);
 
         String type = strength >= 90 ? "AI QUANTUM SNIPER" : strength >= 80 ? "INSTITUTIONAL CORE AI" : "LIQUIDITY VOID AI";
         signals.add(createEliteSignal(symbol, direction, price, sl, tp, mlProb, 0.90, strength, type, direction.equals("BUY")));
@@ -3690,6 +3821,54 @@ public class Fxausd {
             case "GBPJPY": return 2.2;
             default: return 1.5;
         }
+    }
+
+    // UPGRADE 3: Structure-based TP calculation
+    // Scans next 30 candles for swing levels instead of using fixed 5x multiplier
+    private static double computeStructureBasedTP(java.util.List<Candle> candles, int index, String direction, double entry, double slPips, String symbol) {
+        if (index >= candles.size() - 1) {
+            return slPips * 3.0; // fallback to 3:1 if insufficient candles
+        }
+        
+        int lookAhead = Math.min(30, candles.size() - index - 1);
+        double minDistancePips = slPips * 1.5; // TP must be at least 1.5x SL away
+        double maxSearchPips = slPips * 3.0; // default fallback
+        
+        if ("BUY".equals(direction)) {
+            // Find the nearest swing high above entry within next 30 bars
+            double nearestSwingHigh = Double.MAX_VALUE;
+            for (int i = index + 1; i < index + 1 + lookAhead; i++) {
+                if (i < candles.size()) {
+                    double swingHighPips = convertPriceDiffToPips(symbol, candles.get(i).high - entry);
+                    if (swingHighPips >= minDistancePips && swingHighPips < nearestSwingHigh) {
+                        nearestSwingHigh = swingHighPips;
+                    }
+                }
+            }
+            if (nearestSwingHigh < Double.MAX_VALUE && nearestSwingHigh <= slPips * 8.0) {
+                System.out.printf("   [STRUCT] BUY TP anchored to swing high: %.1f pips (1:%.2f R:R)\n", nearestSwingHigh, nearestSwingHigh / slPips);
+                return nearestSwingHigh;
+            }
+        } else {
+            // Find the nearest swing low below entry within next 30 bars
+            double nearestSwingLow = Double.MIN_VALUE;
+            for (int i = index + 1; i < index + 1 + lookAhead; i++) {
+                if (i < candles.size()) {
+                    double swingLowPips = convertPriceDiffToPips(symbol, entry - candles.get(i).low);
+                    if (swingLowPips >= minDistancePips && swingLowPips > nearestSwingLow) {
+                        nearestSwingLow = swingLowPips;
+                    }
+                }
+            }
+            if (nearestSwingLow > Double.MIN_VALUE && nearestSwingLow <= slPips * 8.0) {
+                System.out.printf("   [STRUCT] SELL TP anchored to swing low: %.1f pips (1:%.2f R:R)\n", nearestSwingLow, nearestSwingLow / slPips);
+                return nearestSwingLow;
+            }
+        }
+        
+        // No valid structural level found; fall back to conservative 3:1 (not aggressive 5:1)
+        System.out.printf("   [STRUCT] No swing level found; using conservative 3:1 TP\n");
+        return slPips * 3.0;
     }
 
     private static TradeSignal createEliteSignal(String symbol, String direction, double entry, double slPips, double tpPips, double ml, double smc, double strength, String type, boolean bullish) {
@@ -5077,8 +5256,14 @@ public class Fxausd {
                 }
             }
 
-            if (candlesInTrade > 10) {
-                close(candle.close, "Timeout Exit");
+            // UPGRADE 4: ATR-scaled dynamic timeout (instead of fixed 10 candles)
+            double atr = convertPipsToPrice(signal.symbol, signal.riskAmount);
+            double currentPrice = candle.close;
+            double atrPct = currentPrice > 0 ? atr / currentPrice : 0.001;
+            int maxCandles = Math.max(8, Math.min(50, (int)(20.0 / Math.max(atrPct, 0.0001))));
+            
+            if (candlesInTrade > maxCandles) {
+                close(candle.close, "Timeout Exit (ATR-scaled: " + maxCandles + " bars)");
                 return;
             }
 
