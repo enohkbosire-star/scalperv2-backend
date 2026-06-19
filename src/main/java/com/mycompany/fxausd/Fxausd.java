@@ -1675,7 +1675,8 @@ public class Fxausd {
     public static String MT5_ENDPOINT_OVERRIDE = null;
     public static String MT5_CHART_ENDPOINT_OVERRIDE = null;
     public static String MT5_SYMBOLS_ENDPOINT_OVERRIDE = null;
-    public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
+    public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd.onrender.com/api";
+    public static final String DEFAULT_MT5_LEGACY_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
     public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5000/api";
     public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "http://127.0.0.1:5001/api";
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
@@ -1752,6 +1753,7 @@ public class Fxausd {
         for (String endpoint : endpoints) {
             if (dispatchSignalToMt5Endpoint(signal, endpoint)) {
                 anySuccess = true;
+                break;
             }
         }
 
@@ -1767,7 +1769,12 @@ public class Fxausd {
         normalized = normalized.replaceAll("/+$", "");
         candidates.add(normalized);
         if (normalized.toLowerCase().endsWith("/api")) {
-            candidates.add(normalized.substring(0, normalized.length() - 4));
+            String withoutApi = normalized.substring(0, normalized.length() - 4);
+            if (!withoutApi.isEmpty()) {
+                candidates.add(withoutApi);
+            }
+        } else {
+            candidates.add(normalized + "/api");
         }
         return new ArrayList<>(candidates);
     }
@@ -1804,7 +1811,7 @@ public class Fxausd {
             for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
                 endpoints.add(normalizeMt5OrderEndpoint(base));
             }
-            for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_LEGACY_BASE_ENDPOINT)) {
                 endpoints.add(normalizeMt5OrderEndpoint(base));
             }
             for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
@@ -1847,7 +1854,7 @@ public class Fxausd {
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
             endpoints.add(base + "/candles");
         }
-        for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_LEGACY_BASE_ENDPOINT)) {
             endpoints.add(base + "/candles");
         }
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
@@ -1886,7 +1893,7 @@ public class Fxausd {
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
             endpoints.add(base + "/symbols");
         }
-        for (String base : buildMt5BaseCandidates("https://fxausd.onrender.com/api")) {
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_LEGACY_BASE_ENDPOINT)) {
             endpoints.add(base + "/symbols");
         }
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
@@ -1932,7 +1939,7 @@ public class Fxausd {
         System.out.println("  MT5_BASE_ENDPOINT, MT5_ENDPOINT, MT5_CHART_ENDPOINT, MT5_SYMBOLS_ENDPOINT, MT5_API_KEY");
         System.out.println("  LIVE_STRATEGY_MODE, LIVE_TIMEFRAME, LIVE_CANDLES_COUNT, LIVE_HTF_TIMEFRAME, LIVE_HTF_CANDLES_COUNT");
         System.out.println("Example:");
-        System.out.println("  java -jar Fxausd.jar live --mt5-base-endpoint=https://fxausd-bridge.onrender.com/api");
+        System.out.println("  java -jar Fxausd.jar live --mt5-base-endpoint=https://fxausd.onrender.com/api");
     }
 
     private static boolean dispatchSignalToMt5Endpoint(TradeSignal signal, String endpoint) {
@@ -5260,7 +5267,7 @@ public class Fxausd {
             double atr = convertPipsToPrice(signal.symbol, signal.riskAmount);
             double currentPrice = candle.close;
             double atrPct = currentPrice > 0 ? atr / currentPrice : 0.001;
-            int maxCandles = Math.max(8, Math.min(50, (int)(20.0 / Math.max(atrPct, 0.0001))));
+            int  maxCandles = Math.max(8, Math.min(50, (int)(20.0 / Math.max(atrPct, 0.0001))));
             
             if (candlesInTrade > maxCandles) {
                 close(candle.close, "Timeout Exit (ATR-scaled: " + maxCandles + " bars)");
