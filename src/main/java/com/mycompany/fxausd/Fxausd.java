@@ -1805,33 +1805,29 @@ public class Fxausd {
 
     private static java.util.List<String> getMt5OrderEndpoints() {
         java.util.LinkedHashSet<String> endpoints = new java.util.LinkedHashSet<>();
+        
+        // Priority 1: Command line override
         String primary = firstNonEmpty(MT5_ENDPOINT_OVERRIDE, MT5_ENDPOINT);
         if (primary != null && !primary.trim().isEmpty()) {
-            String normalizedPrimary = normalizeMt5OrderEndpoint(primary);
-            if (normalizedPrimary != null && !normalizedPrimary.isEmpty()) {
-                endpoints.add(normalizedPrimary);
-            }
-        } else {
-            java.util.List<String> baseCandidates = buildMt5BaseCandidates(firstNonEmpty(MT5_BASE_ENDPOINT_OVERRIDE, MT5_BASE_ENDPOINT));
-            for (String base : baseCandidates) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
-            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_BASE_ENDPOINT)) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
-            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_LEGACY_BASE_ENDPOINT)) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
-            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
-            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
-            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3)) {
-                endpoints.add(normalizeMt5OrderEndpoint(base));
-            }
+            endpoints.add(normalizeMt5OrderEndpoint(primary));
         }
+
+        // Priority 2: The known active local bridge (Port 5005)
+        endpoints.add("http://127.0.0.1:5005/api/order");
+        endpoints.add("http://127.0.0.1:5005/order");
+
+        // Priority 3: Other fallbacks
+        java.util.List<String> baseCandidates = buildMt5BaseCandidates(firstNonEmpty(MT5_BASE_ENDPOINT_OVERRIDE, MT5_BASE_ENDPOINT));
+        for (String base : baseCandidates) {
+            endpoints.add(normalizeMt5OrderEndpoint(base));
+        }
+        
+        endpoints.add(normalizeMt5OrderEndpoint(DEFAULT_MT5_BASE_ENDPOINT));
+        endpoints.add(normalizeMt5OrderEndpoint(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT)); // 5000
+        endpoints.add(normalizeMt5OrderEndpoint(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3)); // 5001
+        
+        return new ArrayList<>(endpoints);
+    }
 
         String copierEndpoints = System.getenv(MT5_COPIER_ENDPOINTS_ENV);
         if (copierEndpoints != null && !copierEndpoints.trim().isEmpty()) {
