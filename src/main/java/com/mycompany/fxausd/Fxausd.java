@@ -1678,10 +1678,18 @@ public class Fxausd {
     public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd.onrender.com/api";
     public static final String DEFAULT_MT5_LEGACY_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
     public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5000/api";
-    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "http://127.0.0.1:5001/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "http://127.0.0.1:5005/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3 = "http://127.0.0.1:5001/api";
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
     public static final String DEFAULT_MT5_FALLBACK_ENDPOINT = DEFAULT_MT5_FALLBACK_BASE_ENDPOINT + "/order";
-    private static final java.util.Set<String> sentSignalKeys = new java.util.HashSet<>();
+    // Use a LinkedHashMap limited to the last 500 entries to prevent memory leak
+    private static final java.util.Map<String, Long> sentSignalKeys = java.util.Collections.synchronizedMap(
+            new java.util.LinkedHashMap<String, Long>(512, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, Long> eldest) {
+            return size() > 500 || (System.currentTimeMillis() - eldest.getValue()) > 3_600_000L; // 1 hr TTL
+        }
+    });
     public static final java.util.List<TradeSignal> recentLiveSignals = Collections.synchronizedList(new ArrayList<>());
     public static final java.util.List<TradeRecord> recentTradeRecords = Collections.synchronizedList(new ArrayList<>());
     public static final TradeDatabase tradeDatabase = new TradeDatabase();
@@ -1820,6 +1828,9 @@ public class Fxausd {
             for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
                 endpoints.add(normalizeMt5OrderEndpoint(base));
             }
+            for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3)) {
+                endpoints.add(normalizeMt5OrderEndpoint(base));
+            }
         }
 
         String copierEndpoints = System.getenv(MT5_COPIER_ENDPOINTS_ENV);
@@ -1863,6 +1874,9 @@ public class Fxausd {
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
             endpoints.add(base + "/candles");
         }
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3)) {
+            endpoints.add(base + "/candles");
+        }
         return new ArrayList<>(endpoints);
     }
 
@@ -1900,6 +1914,9 @@ public class Fxausd {
             endpoints.add(base + "/symbols");
         }
         for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2)) {
+            endpoints.add(base + "/symbols");
+        }
+        for (String base : buildMt5BaseCandidates(DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3)) {
             endpoints.add(base + "/symbols");
         }
         return new ArrayList<>(endpoints);
@@ -1945,7 +1962,7 @@ public class Fxausd {
     private static boolean dispatchSignalToMt5Endpoint(TradeSignal signal, String endpoint) {
         String normalizedEndpoint = endpoint.trim();
         String signalKey = normalizedEndpoint + "_" + signal.symbol + "_" + signal.direction + "_" + String.format("%.5f", signal.entry);
-        if (sentSignalKeys.contains(signalKey)) {
+        if (sentSignalKeys.containsKey(signalKey)) {
             System.out.println("⚠️ Duplicate MT5 signal blocked for endpoint " + normalizedEndpoint + ": " + signalKey);
             return false;
         }
@@ -1994,7 +2011,7 @@ public class Fxausd {
                 conn.disconnect();
 
                 if (status >= 200 && status < 300) {
-                    sentSignalKeys.add(signalKey);
+                    sentSignalKeys.put(signalKey, System.currentTimeMillis());
                     System.out.println("✅ Sent MT5 order to " + normalizedEndpoint + ": " + signal.direction + " " + String.format("%.5f", signal.entry));
                     if (!response.isEmpty()) {
                         System.out.println("   MT5 response: " + formatMt5ResponseDetails(response));
@@ -4588,16 +4605,16 @@ public class Fxausd {
             double low = data.get(j).low;
 
             if (low <= stopLossBuy) {
-                return 0;
+                return 0; // Buy SL hit -> Bearish
             }
             if (high >= takeProfitBuy) {
-                return 1;
+                return 1; // Buy TP hit -> Bullish
             }
             if (high >= stopLossSell) {
-                return 0;
+                return 0; // Sell SL hit -> Bearish
             }
             if (low <= takeProfitSell) {
-                return 1;
+                return 1; // Sell TP hit -> Bullish
             }
         }
         return -1;

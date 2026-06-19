@@ -85,19 +85,23 @@ public class CloudAPI {
         // =========================
         // MT5 BRIDGE COMPATIBILITY (Must be high priority)
         // =========================
+        path("/api", () -> {
+            post("/order", (req, res) -> {
+                System.out.println("🤖 [MT5 Bridge] Received POST on /api/order: " + req.body());
+                return gson.toJson(Map.of("status", "success", "message", "Order received by CloudAPI bridge"));
+            });
+            get("/order", (req, res) -> {
+                return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /api/order is active"));
+            });
+        });
+
         post("/order", (req, res) -> {
             System.out.println("🤖 [MT5 Bridge] Received POST on /order: " + req.body());
             return gson.toJson(Map.of("status", "success", "message", "Order received by CloudAPI bridge"));
         });
+        
         get("/order", (req, res) -> {
-            return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /order is active (Use POST for orders)"));
-        });
-        post("/api/order", (req, res) -> {
-            System.out.println("🤖 [MT5 Bridge] Received POST on /api/order: " + req.body());
-            return gson.toJson(Map.of("status", "success", "message", "Order received by CloudAPI bridge"));
-        });
-        get("/api/order", (req, res) -> {
-            return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /api/order is active (Use POST for orders)"));
+            return gson.toJson(Map.of("status", "success", "message", "MT5 Bridge /order is active"));
         });
 
         // =========================
