@@ -65,7 +65,7 @@ public class ExecutionEngine {
                 continue;
             }
             double riskUsd = accountBalanceUsd * riskPercent;
-            double lotSize = Math.max(0.01, Math.min(1.0, riskUsd / (signal.riskAmount * 10.0)));
+            double lotSize = Math.max(0.01, Math.min(1.0, riskUsd / (signal.riskAmount * Fxausd.getPipValue(signal.symbol))));
             if (lotSize <= 0) {
                 System.out.println("⚠️ Position sizing failed for " + signal.symbol + ".");
                 continue;

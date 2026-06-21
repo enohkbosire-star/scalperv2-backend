@@ -1,0 +1,16 @@
+▶ No explicit mode provided; defaulting to live candle market mode.
+🚀 Initializing Cloud API...
+⚠️ Trade database initialization failed: No suitable driver found for postgres://neondb_owner:npg_jx0YXqbu6sAV@ep-summer-cloud-apjyv5uu-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require
+▶ MT5 endpoint configuration:
+   Order candidates: http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order
+   Chart candidates: https://fxausd.onrender.com/api/candles, https://fxausd.onrender.com/candles, https://fxausd-bridge.onrender.com/api/candles, https://fxausd-bridge.onrender.com/candles, http://127.0.0.1:5000/api/candles, http://127.0.0.1:5000/candles, http://127.0.0.1:5005/api/candles, http://127.0.0.1:5005/candles, http://127.0.0.1:5001/api/candles, http://127.0.0.1:5001/candles
+   Symbol candidates: https://fxausd.onrender.com/api/symbols, https://fxausd.onrender.com/symbols, https://fxausd-bridge.onrender.com/api/symbols, https://fxausd-bridge.onrender.com/symbols, http://127.0.0.1:5000/api/symbols, http://127.0.0.1:5000/symbols, http://127.0.0.1:5005/api/symbols, http://127.0.0.1:5005/symbols, http://127.0.0.1:5001/api/symbols, http://127.0.0.1:5001/symbols
+🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED
+😴 Weekend: System idling until Sunday 22:00 UTC...
+💻 Dashboard server running on http://localhost:8891/
+🚀 Starting ForexBot Cloud API on port 8888
+✅ ForexBot API Server started on http://localhost:8888
+📊 Dashboard: http://localhost:8888/api/dashboard
+📱 Local network dashboard: http://10.0.0.166:8888/api/dashboard
+💡 ForexBot live API server is running.
+✅ Database synced with Neon.tech

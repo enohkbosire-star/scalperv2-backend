@@ -1,0 +1,10 @@
+[Thread-0] INFO spark.staticfiles.StaticFilesConfiguration - External StaticResourceHandler configured with folder = uploads
+[Thread-1] INFO org.eclipse.jetty.util.log - Logging initialized @2563ms to org.eclipse.jetty.util.log.Slf4jLog
+[Thread-1] INFO spark.embeddedserver.jetty.EmbeddedJettyServer - == Spark has ignited ...
+[Thread-1] INFO spark.embeddedserver.jetty.EmbeddedJettyServer - >> Listening on 0.0.0.0:4567
+[Thread-1] INFO org.eclipse.jetty.server.Server - jetty-9.4.48.v20220622; built: 2022-06-21T20:42:25.880Z; git: 6b67c5719d1f4371b33655ff2d047d24e171e49a; jvm 21.0.11+9-LTS-211
+[Thread-1] INFO org.eclipse.jetty.server.session - DefaultSessionIdManager workerName=node0
+[Thread-1] INFO org.eclipse.jetty.server.session - No SessionScavenger set, using defaults
+[Thread-1] INFO org.eclipse.jetty.server.session - node0 Scavenging every 660000ms
+[Thread-1] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@3d774b03{HTTP/1.1, (http/1.1)}{0.0.0.0:4567}
+[Thread-1] INFO org.eclipse.jetty.server.Server - Started @5358ms
