@@ -809,3 +809,464 @@
 
 🔍 [Audit] Scanning ETHUSD...
 🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=450&timeframe=H4
+   📈 HTF H4 check for ETHUSD: price=1726.08000, EMA50=1725.27324, EMA200=1825.56519, structure=0, momentum=-0.0549 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=300&timeframe=H1
+   📈 HTF H1 check for ETHUSD: price=1726.08000, EMA50=1723.81071, EMA200=1724.04598, structure=1, momentum=-0.0001 -> UP
+   [BUY Audit] H4:FAIL H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 20
+   [SELL Audit] H4:PASS H1:FAIL TRIG:PASS VWAP:FAIL FLOW:PASS REG:RANGE  -> 65
+🏦 [WORLD BANK LEVEL] Setup Executed: LIQUIDITY VOID AI for ETHUSD SELL Score=65
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for ETHUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: ETHUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+📱 [Mobile Bridge] Signal sent successfully to cloud API: ETHUSD SELL
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol ETHUSD not found or not visible
+   Payload: {"symbol":"ETHUSD","direction":"SELL","entry":1726.08000,"stopLoss":1726.08250,"takeProfit":1726.07250,"confidence":0.7500,"signalStrength":65.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: SELL 1726.08000
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning UK100...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=UK100&count=220&timeframe=M5
+⚠️ [Skip] UK100: Failed to fetch candles.
+
+🔍 [Audit] Scanning GER30...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GER30&count=220&timeframe=M5
+⚠️ [Skip] GER30: Failed to fetch candles.
+💤 Scan complete. Sleeping for 3 minutes for rapid institutional tracking...
+
+⚡ [SCAN] Executing market pulse scan...
+
+🔍 [Audit] Scanning EURUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=450&timeframe=H4
+   📈 HTF H4 check for EURUSD: price=1.14738, EMA50=1.15152, EMA200=1.15664, structure=0, momentum=-0.0044 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=300&timeframe=H1
+   📈 HTF H1 check for EURUSD: price=1.14738, EMA50=1.14738, EMA200=1.15168, structure=-1, momentum=-0.0037 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 60
+🏦 [WORLD BANK LEVEL] Setup Executed: LIQUIDITY VOID AI for EURUSD SELL Score=60
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for EURUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: EURUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14738,"stopLoss":1.14818,"takeProfit":1.14498,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ Duplicate MT5 signal blocked for endpoint https://fxausd.onrender.com/api/order: https://fxausd.onrender.com/api/order_EURUSD_SELL_1.14738
+❌ MT5 dispatch attempt 1 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 2 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 3 to http://127.0.0.1:5000/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 1 to http://127.0.0.1:5001/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 2 to http://127.0.0.1:5001/api/order failed: Connection refused: getsockopt
+❌ MT5 dispatch attempt 3 to http://127.0.0.1:5001/api/order failed: Connection refused: getsockopt
+
+🔍 [Audit] Scanning GBPUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=220&timeframe=M5
+📱 [Mobile Bridge] Signal sent successfully to cloud API: EURUSD SELL
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=450&timeframe=H4
+   📈 HTF H4 check for GBPUSD: price=1.32330, EMA50=1.33007, EMA200=1.33707, structure=0, momentum=-0.0052 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=300&timeframe=H1
+   📈 HTF H1 check for GBPUSD: price=1.32330, EMA50=1.32327, EMA200=1.33033, structure=1, momentum=-0.0053 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 60
+🏦 [WORLD BANK LEVEL] Setup Executed: LIQUIDITY VOID AI for GBPUSD SELL Score=60
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for GBPUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: GBPUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+📱 [Mobile Bridge] Signal sent successfully to cloud API: GBPUSD SELL
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol GBPUSD not found or not visible
+   Payload: {"symbol":"GBPUSD","direction":"SELL","entry":1.32330,"stopLoss":1.32436,"takeProfit":1.32012,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: SELL 1.32330
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning USDJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=450&timeframe=H4
+   📈 HTF H4 check for USDJPY: price=161.28532, EMA50=160.85992, EMA200=160.08251, structure=0, momentum=0.0049 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=300&timeframe=H1
+   📈 HTF H1 check for USDJPY: price=161.28532, EMA50=161.29780, EMA200=160.83933, structure=0, momentum=0.0029 -> UP
+   [BUY Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 45
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 10
+   ⏳ [Audit] USDJPY No setup: Max Score 45 (Req: 60, Regime: RANGING)
+⏳ [Idle] USDJPY: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning XAUUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=450&timeframe=H4
+   📈 HTF H4 check for XAUUSD: price=4156.53246, EMA50=4212.37112, EMA200=4336.95802, structure=0, momentum=-0.0287 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=300&timeframe=H1
+   📈 HTF H1 check for XAUUSD: price=4156.53246, EMA50=4156.35494, EMA200=4214.79800, structure=0, momentum=-0.0139 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] XAUUSD No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] XAUUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning NAS100...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NAS100&count=220&timeframe=M5
+⚠️ [Skip] NAS100: Failed to fetch candles.
+
+🔍 [Audit] Scanning US30...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=US30&count=220&timeframe=M5
+⚠️ [Skip] US30: Failed to fetch candles.
+
+🔍 [Audit] Scanning AUDUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=450&timeframe=H4
+   📈 HTF H4 check for AUDUSD: price=0.70131, EMA50=0.70291, EMA200=0.70736, structure=0, momentum=-0.0063 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=300&timeframe=H1
+   📈 HTF H1 check for AUDUSD: price=0.70131, EMA50=0.70113, EMA200=0.70300, structure=1, momentum=-0.0027 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 60
+🏦 [WORLD BANK LEVEL] Setup Executed: LIQUIDITY VOID AI for AUDUSD SELL Score=60
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for AUDUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: AUDUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+📱 [Mobile Bridge] Signal sent successfully to cloud API: AUDUSD SELL
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70131,"stopLoss":0.70211,"takeProfit":0.69891,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: SELL 0.70131
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning USDCAD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=220&timeframe=M5
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDCAD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=450&timeframe=H4
+   📈 HTF H4 check for USDCAD: price=1.41554, EMA50=1.40932, EMA200=1.39462, structure=0, momentum=0.0105 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDCAD&count=300&timeframe=H1
+   📈 HTF H1 check for USDCAD: price=1.41554, EMA50=1.41632, EMA200=1.40908, structure=0, momentum=0.0051 -> UP
+   [BUY Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 45
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 10
+   ⏳ [Audit] USDCAD No setup: Max Score 45 (Req: 60, Regime: RANGING)
+⏳ [Idle] USDCAD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning NZDUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=450&timeframe=H4
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=NZDUSD&count=450&timeframe=H4
+   📈 HTF H4 check for NZDUSD: price=0.57404, EMA50=0.57775, EMA200=0.58260, structure=-1, momentum=-0.0083 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=300&timeframe=H1
+   📈 HTF H1 check for NZDUSD: price=0.57404, EMA50=0.57423, EMA200=0.57794, structure=-1, momentum=-0.0064 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 45
+   ⏳ [Audit] NZDUSD No setup: Max Score 45 (Req: 60, Regime: RANGING)
+⏳ [Idle] NZDUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning EURJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=450&timeframe=H4
+   📈 HTF H4 check for EURJPY: price=185.05266, EMA50=185.23010, EMA200=185.15126, structure=0, momentum=0.0004 -> FLAT
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=300&timeframe=H1
+   📈 HTF H1 check for EURJPY: price=185.05266, EMA50=185.06274, EMA200=185.23097, structure=-1, momentum=-0.0009 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:FAIL H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 35
+   ⏳ [Audit] EURJPY No setup: Max Score 35 (Req: 55, Regime: DISTRIBUTION)
+⏳ [Idle] EURJPY: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning GBPJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=450&timeframe=H4
+   📈 HTF H4 check for GBPJPY: price=213.43315, EMA50=213.94749, EMA200=214.03174, structure=0, momentum=-0.0004 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=GBPJPY&count=300&timeframe=H1
+   📈 HTF H1 check for GBPJPY: price=213.43164, EMA50=213.43737, EMA200=213.96195, structure=1, momentum=-0.0025 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] GBPJPY No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] GBPJPY: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning EURGBP...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURGBP&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURGBP&count=450&timeframe=H4
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=EURGBP&count=450&timeframe=H4
+   📈 HTF H4 check for EURGBP: price=0.86702, EMA50=0.86578, EMA200=0.86506, structure=0, momentum=0.0008 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURGBP&count=300&timeframe=H1
+   📈 HTF H1 check for EURGBP: price=0.86704, EMA50=0.86709, EMA200=0.86573, structure=-1, momentum=0.0016 -> UP
+   [BUY Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 50
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 15
+   ⏳ [Audit] EURGBP No setup: Max Score 50 (Req: 55, Regime: DISTRIBUTION)
+⏳ [Idle] EURGBP: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning USDCHF...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCHF&count=220&timeframe=M5
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDCHF&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCHF&count=450&timeframe=H4
+   📈 HTF H4 check for USDCHF: price=0.80600, EMA50=0.80197, EMA200=0.79476, structure=-1, momentum=0.0091 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd-bridge.onrender.com/api/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Candle fetch failed: HTTP 404 Not Found
+   💡 Tip: 404 means the path is wrong. Check if your bridge expects '/api/candles' or just '/candles'.
+🌐 Fetching MT5 candles URL: https://fxausd-bridge.onrender.com/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Candle fetch failed: HTTP 404 Not Found
+   💡 Tip: 404 means the path is wrong. Check if your bridge expects '/api/candles' or just '/candles'.
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5000/api/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from http://127.0.0.1:5000/api/candles: Connection refused: getsockopt
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5000/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from http://127.0.0.1:5000/candles: Connection refused: getsockopt
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5005/api/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Candle fetch failed: HTTP 400 {"error":"Symbol not found or not visible in Market Watch","mt5_error":{"code":-1,"message":"Terminal: Call failed"},"symbol":"USDCHF"}
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5005/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Candle fetch failed: HTTP 404 <!doctype html><html lang=en><title>404 Not Found</title><h1>Not Found</h1><p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+   💡 Tip: 404 means the path is wrong. Check if your bridge expects '/api/candles' or just '/candles'.
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/api/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from http://127.0.0.1:5001/api/candles: Connection refused: getsockopt
+🌐 Fetching MT5 candles URL: http://127.0.0.1:5001/candles?symbol=USDCHF&count=300&timeframe=H1
+❌ Failed to fetch candles from http://127.0.0.1:5001/candles: Connection refused: getsockopt
+   Tip: if your MT5 bridge is not on https://fxausd.onrender.com/api or http://127.0.0.1:5000/api, set MT5_BASE_ENDPOINT, MT5_CHART_ENDPOINT, or MT5_CHART_URL.
+   Ensure your Python MT5 bridge is running (usually on port 5000 or 5001).
+   ⚠️ HTF check failed: not enough H1 candles for USDCHF.
+   [BUY Audit] H4:PASS H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 25
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 10
+   ⏳ [Audit] USDCHF No setup: Max Score 25 (Req: 60, Regime: RANGING)
+⏳ [Idle] USDCHF: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning BTCUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=BTCUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=BTCUSD&count=450&timeframe=H4
+   📈 HTF H4 check for BTCUSD: price=64089.99000, EMA50=64184.59707, EMA200=67442.95165, structure=1, momentum=-0.0483 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=BTCUSD&count=300&timeframe=H1
+   📈 HTF H1 check for BTCUSD: price=64089.99000, EMA50=63803.24973, EMA200=64118.57797, structure=0, momentum=-0.0049 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] BTCUSD No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] BTCUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning ETHUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=450&timeframe=H4
+   📈 HTF H4 check for ETHUSD: price=1726.98000, EMA50=1725.30854, EMA200=1825.57414, structure=0, momentum=-0.0549 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=ETHUSD&count=300&timeframe=H1
+   📈 HTF H1 check for ETHUSD: price=1726.98000, EMA50=1723.84600, EMA200=1724.05494, structure=1, momentum=-0.0001 -> UP
+   [BUY Audit] H4:FAIL H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 20
+   [SELL Audit] H4:PASS H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 35
+   ⏳ [Audit] ETHUSD No setup: Max Score 35 (Req: 60, Regime: RANGING)
+⏳ [Idle] ETHUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning UK100...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=UK100&count=220&timeframe=M5
+⚠️ [Skip] UK100: Failed to fetch candles.
+
+🔍 [Audit] Scanning GER30...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GER30&count=220&timeframe=M5
+⚠️ [Skip] GER30: Failed to fetch candles.
+💤 Scan complete. Sleeping for 3 minutes for rapid institutional tracking...
+
+⚡ [SCAN] Executing market pulse scan...
+
+🔍 [Audit] Scanning EURUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=450&timeframe=H4
+   📈 HTF H4 check for EURUSD: price=1.14735, EMA50=1.15152, EMA200=1.15664, structure=0, momentum=-0.0044 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURUSD&count=300&timeframe=H1
+   📈 HTF H1 check for EURUSD: price=1.14735, EMA50=1.14738, EMA200=1.15168, structure=-1, momentum=-0.0037 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 60
+🏦 [WORLD BANK LEVEL] Setup Executed: LIQUIDITY VOID AI for EURUSD SELL Score=60
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for EURUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: EURUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol EURUSD not found or not visible
+   Payload: {"symbol":"EURUSD","direction":"SELL","entry":1.14735,"stopLoss":1.14815,"takeProfit":1.14495,"confidence":0.7500,"signalStrength":60.0000,"reason":"ELITE LIQUIDITY VOID AI: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: SELL 1.14735
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning GBPUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=220&timeframe=M5
+📱 [Mobile Bridge] Signal sent successfully to cloud API: EURUSD SELL
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=450&timeframe=H4
+   📈 HTF H4 check for GBPUSD: price=1.32332, EMA50=1.33007, EMA200=1.33707, structure=0, momentum=-0.0052 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPUSD&count=300&timeframe=H1
+   📈 HTF H1 check for GBPUSD: price=1.32332, EMA50=1.32331, EMA200=1.33026, structure=1, momentum=-0.0052 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] GBPUSD No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] GBPUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning USDJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=450&timeframe=H4
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDJPY&count=450&timeframe=H4
+   📈 HTF H4 check for USDJPY: price=161.27264, EMA50=160.85942, EMA200=160.08239, structure=0, momentum=0.0049 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDJPY&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=USDJPY&count=300&timeframe=H1
+   📈 HTF H1 check for USDJPY: price=161.27264, EMA50=161.28829, EMA200=160.84362, structure=0, momentum=0.0028 -> UP
+   [BUY Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 50
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:PASS VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 45
+   ⏳ [Audit] USDJPY No setup: Max Score 50 (Req: 55, Regime: ACCUMULATION)
+⏳ [Idle] USDJPY: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning XAUUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=450&timeframe=H4
+   📈 HTF H4 check for XAUUSD: price=4156.63475, EMA50=4212.37513, EMA200=4336.95903, structure=0, momentum=-0.0287 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=XAUUSD&count=300&timeframe=H1
+   📈 HTF H1 check for XAUUSD: price=4156.63475, EMA50=4157.06614, EMA200=4214.22902, structure=0, momentum=-0.0136 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] XAUUSD No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] XAUUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning NAS100...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NAS100&count=220&timeframe=M5
+⚠️ [Skip] NAS100: Failed to fetch candles.
+
+🔍 [Audit] Scanning US30...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=US30&count=220&timeframe=M5
+⚠️ [Skip] US30: Failed to fetch candles.
+
+🔍 [Audit] Scanning AUDUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=450&timeframe=H4
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=AUDUSD&count=450&timeframe=H4
+   📈 HTF H4 check for AUDUSD: price=0.70120, EMA50=0.70290, EMA200=0.70735, structure=0, momentum=-0.0063 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=AUDUSD&count=300&timeframe=H1
+   📈 HTF H1 check for AUDUSD: price=0.70119, EMA50=0.70118, EMA200=0.70298, structure=1, momentum=-0.0026 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:PASS H1:PASS TRIG:PASS VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 90
+🏦 [WORLD BANK LEVEL] Setup Executed: AI QUANTUM SNIPER for AUDUSD SELL Score=90
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for AUDUSD
+🚀 [AI BOT] DISPATCHING SIGNAL: AUDUSD SELL
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+📱 [Mobile Bridge] Signal sent successfully to cloud API: AUDUSD SELL
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol AUDUSD not found or not visible
+   Payload: {"symbol":"AUDUSD","direction":"SELL","entry":0.70120,"stopLoss":0.70200,"takeProfit":0.69880,"confidence":0.7500,"signalStrength":90.0000,"reason":"ELITE AI QUANTUM SNIPER: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: SELL 0.70120
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning USDCAD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=450&timeframe=H4
+   📈 HTF H4 check for USDCAD: price=1.41662, EMA50=1.40937, EMA200=1.39463, structure=0, momentum=0.0106 -> UP
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=USDCAD&count=300&timeframe=H1
+   📈 HTF H1 check for USDCAD: price=1.41662, EMA50=1.41631, EMA200=1.40915, structure=0, momentum=0.0051 -> UP
+   [BUY Audit] H4:PASS H1:PASS TRIG:PASS VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 80
+   [SELL Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 15
+🏦 [WORLD BANK LEVEL] Setup Executed: INSTITUTIONAL CORE AI for USDCAD BUY Score=80
+🔥 [AUTO-EXECUTE] A+ Quantum setup found for USDCAD
+🚀 [AI BOT] DISPATCHING SIGNAL: USDCAD BUY
+▶ MT5 endpoints to try: [http://127.0.0.1:5005/api/order, http://127.0.0.1:5005/order, https://fxausd.onrender.com/api/order, http://127.0.0.1:5000/api/order, http://127.0.0.1:5001/api/order]
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+📱 [Mobile Bridge] Signal sent successfully to cloud API: USDCAD BUY
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/api/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+⚠️ MT5 dispatch returned 400 from http://127.0.0.1:5005/order: error=Symbol USDCAD not found or not visible
+   Payload: {"symbol":"USDCAD","direction":"BUY","entry":1.41662,"stopLoss":1.41514,"takeProfit":1.42106,"confidence":0.7500,"signalStrength":80.0000,"reason":"ELITE INSTITUTIONAL CORE AI: Confluence 0.90 | RR 1:3.0"}
+✅ Sent MT5 order to https://fxausd.onrender.com/api/order: BUY 1.41662
+   MT5 response: status=success, message=Order received by CloudAPI bridge
+🔗 [COPY TRADING] Mirroring trade for followers...
+
+🔍 [Audit] Scanning NZDUSD...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=450&timeframe=H4
+   📈 HTF H4 check for NZDUSD: price=0.57395, EMA50=0.57775, EMA200=0.58260, structure=-1, momentum=-0.0083 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=NZDUSD&count=300&timeframe=H1
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=NZDUSD&count=300&timeframe=H1
+   📈 HTF H1 check for NZDUSD: price=0.57395, EMA50=0.57427, EMA200=0.57790, structure=0, momentum=-0.0063 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:RANGE  -> 0
+   [SELL Audit] H4:PASS H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:RANGE  -> 55
+   ⏳ [Audit] NZDUSD No setup: Score 55 below regime threshold 60 (RANGING)
+⏳ [Idle] NZDUSD: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning EURJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=450&timeframe=H4
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=EURJPY&count=450&timeframe=H4
+   📈 HTF H4 check for EURJPY: price=185.06244, EMA50=185.23048, EMA200=185.15136, structure=0, momentum=0.0004 -> FLAT
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=EURJPY&count=300&timeframe=H1
+   📈 HTF H1 check for EURJPY: price=185.06039, EMA50=185.06947, EMA200=185.22954, structure=0, momentum=-0.0009 -> DOWN
+   [BUY Audit] H4:FAIL H1:FAIL TRIG:FAIL VWAP:FAIL FLOW:FAIL REG:ACC/DIST  -> 5
+   [SELL Audit] H4:FAIL H1:PASS TRIG:FAIL VWAP:FAIL FLOW:PASS REG:ACC/DIST  -> 35
+   ⏳ [Audit] EURJPY No setup: Max Score 35 (Req: 55, Regime: DISTRIBUTION)
+⏳ [Idle] EURJPY: Monitoring fractal for A+ confluence...
+
+🔍 [Audit] Scanning GBPJPY...
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=220&timeframe=M5
+❌ Failed to fetch candles from https://fxausd.onrender.com/api/candles: Read timed out
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/candles?symbol=GBPJPY&count=220&timeframe=M5
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=450&timeframe=H4
+   📈 HTF H4 check for GBPJPY: price=213.41042, EMA50=213.94660, EMA200=214.03151, structure=0, momentum=-0.0004 -> DOWN
+🌐 Fetching MT5 candles URL: https://fxausd.onrender.com/api/candles?symbol=GBPJPY&count=300&timeframe=H1
