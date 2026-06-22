@@ -24,8 +24,13 @@ public class ForexBot {
     private static final Gson GSON = new Gson();
 
     private static int initializePort() {
-        // Use FOREXBOT_PORT if available, otherwise fallback to 8888. 
-        // Avoid using "PORT" directly here if CloudAPI is also using it to avoid collision on Render.
+        // PRIORITY 1: Render's default PORT
+        String renderPort = System.getenv("PORT");
+        if (renderPort != null && !renderPort.isEmpty()) {
+            return Integer.parseInt(renderPort);
+        }
+        
+        // PRIORITY 2: Custom FOREXBOT_PORT
         String port = System.getenv("FOREXBOT_PORT");
         if (port != null && !port.isEmpty()) {
             try {

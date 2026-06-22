@@ -1079,8 +1079,16 @@ public class Fxausd {
 
         if (liveMode) {
             System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
-            startDashboardServer();
-            startForexBotServer();
+            
+            // Start servers in a background thread to prevent blocking the scanner
+            new Thread(() -> {
+                try {
+                    startDashboardServer();
+                    startForexBotServer();
+                } catch (Exception e) {
+                    System.err.println("❌ Server Error: " + e.getMessage());
+                }
+            }).start();
 
             int liveCount = parseIntEnv("LIVE_CANDLES_COUNT", 220);
             String liveTimeframe = System.getenv().getOrDefault("LIVE_TIMEFRAME", "M5");
@@ -1116,6 +1124,11 @@ public class Fxausd {
                     } else {
                         System.out.println("⏳ [Idle] " + symbol + ": Monitoring fractal for A+ confluence...");
                     }
+                    
+                    // --- RATE LIMIT PROTECTION ---
+                    // Free Twelve Data only allows 8 requests/min. 
+                    // Sleep 10s between symbols to stay under the limit.
+                    Thread.sleep(10000);
                 }
                 int sleepMins = forexClosed ? 15 : 3;
                 System.out.println("💤 Scan complete. Sleeping for " + sleepMins + " minutes...");
