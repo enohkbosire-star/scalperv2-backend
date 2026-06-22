@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
+import java.util.Base64;
 import javax.swing.*;
 import javax.net.ssl.SSLSocketFactory;
 import com.sun.net.httpserver.HttpServer;
@@ -24,7 +25,6 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.DefaultOHLCDataset;
 import org.jfree.data.xy.OHLCDataset;
 import org.jfree.data.xy.OHLCDataItem;
-
 
 public class Fxausd {
 
@@ -65,9 +65,10 @@ public class Fxausd {
     static final double ELITE_MIN_SMC_CONFLUENCE = 0.65;
     static final double ELITE_MIN_VOLUME_SPIKE = 1.05;
     static final double ELITE_MIN_ML_PROBABILITY = 0.65;
-    static final double ELITE_MIN_RR_RATIO = 2.0; 
+    static final double ELITE_MIN_RR_RATIO = 2.0;
 
     public static class MarketIntelligence {
+
         public String bias = "NEUTRAL";
         public String session = "IDLE";
         public double volatility = 0.0;
@@ -76,7 +77,7 @@ public class Fxausd {
         public double liquidityScore = 0.0;
         public String setupQuality = "LOW";
         public double imbalanceRatio = 0.0;
-        public double sentimentScore = 0.5; 
+        public double sentimentScore = 0.5;
         public double dominanceIndex = 1.0;
         public double trendStrength = 0.0;
         public double volumeIntensity = 0.0;
@@ -84,7 +85,7 @@ public class Fxausd {
         public double institutionalPressure = 0.0;
         public String heartbeat = "NORMAL";
     }
-    
+
     public static MarketIntelligence currentIntel = new MarketIntelligence();
 
     // Institutional Bank-Grade Constants
@@ -137,12 +138,14 @@ public class Fxausd {
     static final String LIVE_ACTIVE_SESSION_START_ENV = "LIVE_ACTIVE_SESSION_START_UTC";
     static final String LIVE_ACTIVE_SESSION_END_ENV = "LIVE_ACTIVE_SESSION_END_UTC";
     static final java.util.List<String> PRIMARY_FX_SYMBOLS = Arrays.asList(
-        "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NAS100", "US30", "AUDUSD", "USDCAD", "NZDUSD", 
-        "EURJPY", "GBPJPY", "EURGBP", "USDCHF", "BTCUSD", "ETHUSD", "UK100", "GER30"
+            "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NAS100", "US30", "AUDUSD", "USDCAD", "NZDUSD",
+            "EURJPY", "GBPJPY", "EURGBP", "USDCHF", "BTCUSD", "ETHUSD", "UK100", "GER30"
     );
 
     private static String getBaseSymbol(String brokerSymbol) {
-        if (brokerSymbol == null) return "";
+        if (brokerSymbol == null) {
+            return "";
+        }
         for (String base : PRIMARY_FX_SYMBOLS) {
             if (brokerSymbol.toUpperCase().startsWith(base)) {
                 return base;
@@ -168,14 +171,28 @@ public class Fxausd {
         return selected;
     }
 
+    public static boolean isCrypto(String symbol) {
+        if (symbol == null) {
+            return false;
+        }
+        String s = symbol.toUpperCase();
+        return s.contains("BTC") || s.contains("ETH") || s.contains("SOL") || s.contains("LTC") || s.contains("XRP");
+    }
+
     public static boolean isForexMarketClosed() {
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         DayOfWeek day = nowUtc.getDayOfWeek();
         int hour = nowUtc.getHour();
         // Forex Market standard: Sunday 21:00 UTC to Friday 21:00 UTC
-        if (day == DayOfWeek.FRIDAY && hour >= 21) return true;
-        if (day == DayOfWeek.SATURDAY) return true;
-        if (day == DayOfWeek.SUNDAY && hour < 21) return true;
+        if (day == DayOfWeek.FRIDAY && hour >= 21) {
+            return true;
+        }
+        if (day == DayOfWeek.SATURDAY) {
+            return true;
+        }
+        if (day == DayOfWeek.SUNDAY && hour < 21) {
+            return true;
+        }
         return false;
     }
 
@@ -191,7 +208,7 @@ public class Fxausd {
             LocalTime londonClose = LocalTime.of(16, 0);
             LocalTime nyOpen = LocalTime.of(12, 0);
             LocalTime nyClose = LocalTime.of(21, 0);
-            
+
             return isTimeBetween(currentTime, londonOpen, londonClose)
                     || isTimeBetween(currentTime, nyOpen, nyClose);
         }
@@ -343,7 +360,7 @@ public class Fxausd {
         double htfMomentum = (shortEma - longEma) / longEma;
         boolean momentumUp = htfMomentum > (MIN_SIGNAL_MOMENTUM * 0.5); // Relaxed momentum
         boolean momentumDown = htfMomentum < -(MIN_SIGNAL_MOMENTUM * 0.5);
-        
+
         // Relaxed Trend Logic: Price above Long EMA + (Structure OR Momentum)
         boolean uptrend = (currentPrice > longEma) && (structure == 1 || momentumUp);
         boolean downtrend = (currentPrice < longEma) && (structure == -1 || momentumDown);
@@ -1009,16 +1026,9 @@ public class Fxausd {
         boolean serverMode = containsArg(args, "server");
         boolean chartMode = containsArg(args, "chart");
         boolean testSignalMode = containsArg(args, "testsignal");
-        boolean crtMode = containsArg(args, "crt");
-        boolean comboMode = containsArg(args, "combo");
         boolean debugMode = containsArg(args, "debug");
 
-        boolean explicitMode = serverMode || chartMode || testSignalMode;
-        if (containsArg(args, "--help") || containsArg(args, "-h")) {
-            printUsage();
-            return;
-        }
-        if (!liveMode && !explicitMode) {
+        if (!liveMode && !serverMode && !chartMode && !testSignalMode) {
             liveMode = true;
             System.out.println("▶ No explicit mode provided; defaulting to live candle market mode.");
         }
@@ -1027,83 +1037,9 @@ public class Fxausd {
         MT5_ENDPOINT_OVERRIDE = getArgValue(args, "--mt5-endpoint=");
         MT5_CHART_ENDPOINT_OVERRIDE = getArgValue(args, "--mt5-chart-endpoint=");
         MT5_SYMBOLS_ENDPOINT_OVERRIDE = getArgValue(args, "--mt5-symbols-endpoint=");
-        if (MT5_BASE_ENDPOINT_OVERRIDE != null) {
-            System.out.println("▶ Using command-line MT5 base endpoint override: " + MT5_BASE_ENDPOINT_OVERRIDE);
-        }
-        if (MT5_CHART_ENDPOINT_OVERRIDE != null) {
-            System.out.println("▶ Using command-line MT5 chart endpoint override: " + MT5_CHART_ENDPOINT_OVERRIDE);
-        }
-        if (MT5_ENDPOINT_OVERRIDE != null) {
-            System.out.println("▶ Using command-line MT5 order endpoint override: " + MT5_ENDPOINT_OVERRIDE);
-        }
-        if (MT5_SYMBOLS_ENDPOINT_OVERRIDE != null) {
-            System.out.println("▶ Using command-line MT5 symbols endpoint override: " + MT5_SYMBOLS_ENDPOINT_OVERRIDE);
-        }
 
         tradeDatabase.initialize();
         printMt5EndpointInfo();
-
-        if (chartMode) {
-            String symbol = DEFAULT_CHART_SYMBOL;
-            String timeframe = "M5";
-            int count = 80;
-
-            if (args.length > 1) {
-                String arg = args[1].trim().toUpperCase();
-                if (arg.equals("LIST")) {
-                    listAvailableSymbols();
-                    return;
-                }
-                if (arg.equals("ALL")) {
-                    System.out.println("📈 Opening charts for popular symbol set...");
-                    for (String pair : POPULAR_CHART_SYMBOLS) {
-                        showLiveMarketChart(pair, count, timeframe, 10);
-                    }
-                    return;
-                }
-                symbol = arg;
-            }
-            if (args.length > 2) {
-                timeframe = args[2].trim().toUpperCase();
-            }
-            if (args.length > 3) {
-                try {
-                    count = Integer.parseInt(args[3]);
-                } catch (NumberFormatException ignored) {
-                }
-            }
-
-            System.out.println("📈 MARKET CHART MODE ENABLED for " + symbol + " " + timeframe);
-            showLiveMarketChart(symbol, count, timeframe, 10);
-            return;
-        }
-
-        if (testSignalMode) {
-            System.out.println("🚀 TEST SIGNAL MODE ENABLED");
-            TradeSignal testSignal = new TradeSignal(
-                    "EURUSD", "BUY", 1.1765, 1.1755, 1.1785,
-                    0.75, 0.85, 80.0, "Forced test signal", 10.0, 30.0
-            );
-
-            // Send to Mobile App
-            MobileSignalBridge.sendToMobile(
-                testSignal.symbol, 
-                testSignal.direction, 
-                testSignal.entry, 
-                testSignal.takeProfit, 
-                testSignal.stopLoss,
-                testSignal.mlConfidence,
-                testSignal.signalStrength,
-                testSignal.reason,
-                testSignal.riskRewardRatio,
-                "TEST",
-                "CORE"
-            );
-
-            boolean sent = sendSignalToMT5(testSignal);
-            System.out.println("✅ Test signal sent to MT5: " + sent);
-            return;
-        }
 
         if (serverMode) {
             System.out.println("🚀 Starting MT5 signal receiver server only...");
@@ -1112,140 +1048,14 @@ public class Fxausd {
             return;
         }
 
-        String liveTimeframe = System.getenv("LIVE_TIMEFRAME");
-        if (liveTimeframe == null || liveTimeframe.isEmpty()) {
-            liveTimeframe = "M5";
-        }
-        int liveCount = 220;
-        String liveCountEnv = System.getenv("LIVE_CANDLES_COUNT");
-        if (liveCountEnv != null && !liveCountEnv.isEmpty()) {
-            try {
-                liveCount = Integer.parseInt(liveCountEnv);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
-        if (liveMode) {
-            System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
-            if (ForexBot.isForexMarketClosed()) {
-                System.out.println("⚠️ Forex market is currently closed. Live signal generation and dispatch are suspended until market reopens.");
-                startDashboardServer();
-                startForexBotServer();
-                return;
-            }
-            if (!isWithinActiveForexSession()) {
-                System.out.println("⚠️ Outside active FX session window. Live signals are suspended until next London/New York session.");
-                startDashboardServer();
-                startForexBotServer();
-                return;
-            }
-            if (MT5_ENDPOINT != null && !MT5_ENDPOINT.isEmpty()) {
-                System.out.println("▶ MT5 endpoint: " + MT5_ENDPOINT);
-            } else {
-                System.out.println("▶ MT5 endpoint is not set, using default: " + DEFAULT_MT5_ENDPOINT);
-            }
-            if (crtMode || comboMode) {
-                System.out.println("▶ Legacy CRT/combo flags ignored; using A+ SMC master trigger execution path.");
-                crtMode = false;
-                comboMode = false;
-            }
-            System.out.println("▶ Live execution uses A+ master trend trigger + liquidity confirmation + ML confirmation.");
-            if (debugMode) {
-                System.out.println("🔍 LIVE DEBUG MODE ENABLED: previewing only high-confidence A+ SMC signals before MT5 dispatch.");
-            }
-            System.out.println("▶ To run the MT5 signal receiver server only, use: java ... Fxausd server");
-
-            while (true) {
-                cloudCache.clear();
-                if (isForexMarketClosed()) {
-                    System.out.println("😴 Weekend: System idling until Sunday 22:00 UTC...");
-                    Thread.sleep(60000 * 30);
-                    continue;
-                }
-
-                System.out.println("\n⚡ [SCAN] Executing market pulse scan...");
-                java.util.List<String> liveSymbols = getLiveSymbols(args);
-                java.util.List<TradeSignal> liveSignals = new ArrayList<>();
-
-                try {
-                    for (String symbol : liveSymbols) {
-                        System.out.println("\n🔍 [Audit] Scanning " + symbol + "...");
-                        CloudAPI.updateBotStatus("SCANNING", "Quantum QILH Scan: " + symbol);
-                        java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
-                        if (symbolCandles.isEmpty()) {
-                             System.out.println("⚠️ [Skip] " + symbol + ": Failed to fetch candles.");
-                             continue;
-                        }
-
-                        // Update Market Intelligence for this symbol fractal
-                        updateGlobalIntelligence(symbol, symbolCandles);
-
-                        // Use QUANTUM institutional strategy
-                        java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
-
-                        if (!eliteSignals.isEmpty()) {
-                            System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
-                            sendLiveSignals(eliteSignals);
-                        } else {
-                            System.out.println("⏳ [Idle] " + symbol + ": Monitoring fractal for A+ confluence...");
-                        }
-                        liveSignals.addAll(eliteSignals);
-                    }
-                } catch (Exception e) {
-                    System.err.println("🚨 Scanner Error: " + e.getMessage());
-                }
-
-                System.out.println("💤 Scan complete. Sleeping for 3 minutes for rapid institutional tracking...");
-                Thread.sleep(60000 * 3);
-            }
-        }
-
-        java.util.List<Candle> candles;
-        candles = loadData("data/eurusd.csv");
-        System.out.println("✅ Loaded candles: " + candles.size());
-
-        java.util.List<double[]> features = new ArrayList<>();
-        java.util.List<Integer> labels = new ArrayList<>();
-        java.util.List<Integer> candleIndexes = new ArrayList<>();
-
-        // Build dataset (start at 50 to have enough history for indicators)
-        for (int i = 50; i < candles.size() - 10; i++) {
-            double[] f = buildFeatures(candles, i);
-            int label = createLabel(candles, i);
-            if (label != -1) { // Skip noise trades
-                features.add(f);
-                labels.add(label);
-                candleIndexes.add(i);
-            }
-        }
-
-        // Keep raw features and scale only on the training set to avoid lookahead bias.
-        java.util.List<double[]> rawFeatures = new ArrayList<>(features);
-
         if (testSignalMode) {
             System.out.println("🚀 TEST SIGNAL MODE ENABLED");
-            TradeSignal testSignal = new TradeSignal(
-                    "EURUSD", "BUY", 1.1765, 1.1755, 1.1785,
-                    0.75, 0.85, 80.0, "Forced test signal", 10.0, 30.0
-            );
-
-            // Send to Mobile App
-            MobileSignalBridge.sendToMobile(
-                testSignal.symbol,
-                testSignal.direction,
-                testSignal.entry,
-                testSignal.takeProfit,
-                testSignal.stopLoss,
-                testSignal.mlConfidence,
-                testSignal.signalStrength,
-                testSignal.reason,
-                testSignal.riskRewardRatio,
-                "TEST",
-                "CORE"
-            );
-
-            boolean sent = sendSignalToMT5(testSignal);
-            System.out.println("✅ Test signal sent to MT5: " + sent);
+            TradeSignal testSignal = new TradeSignal("EURUSD", "BUY", 1.1765, 1.1755, 1.1785,
+                    0.75, 0.85, 80.0, "Forced test signal", 10.0, 30.0);
+            MobileSignalBridge.sendToMobile(testSignal.symbol, testSignal.direction, testSignal.entry,
+                    testSignal.takeProfit, testSignal.stopLoss, testSignal.mlConfidence,
+                    testSignal.signalStrength, testSignal.reason, testSignal.riskRewardRatio, "TEST", "CORE");
+            sendSignalToMT5(testSignal);
             return;
         }
 
@@ -1253,411 +1063,64 @@ public class Fxausd {
             String symbol = DEFAULT_CHART_SYMBOL;
             String timeframe = "M5";
             int count = 80;
-
             if (args.length > 1) {
-                String arg = args[1].trim().toUpperCase();
-                if (arg.equals("LIST")) {
-                    listAvailableSymbols();
-                    return;
-                }
-                if (arg.equals("ALL")) {
-                    System.out.println("📈 Opening charts for popular symbol set...");
-                    for (String pair : POPULAR_CHART_SYMBOLS) {
-                        showLiveMarketChart(pair, count, timeframe, 10);
-                    }
-                    return;
-                }
-                symbol = arg;
+                symbol = args[1].trim().toUpperCase();
             }
             if (args.length > 2) {
                 timeframe = args[2].trim().toUpperCase();
             }
-            if (args.length > 3) {
-                try {
-                    count = Integer.parseInt(args[3]);
-                } catch (NumberFormatException ignored) {
-                }
+            if (args.length > 3) try {
+                count = Integer.parseInt(args[3]);
+            } catch (Exception ignored) {
             }
-
-            System.out.println("📈 MARKET CHART MODE ENABLED for " + symbol + " " + timeframe);
             showLiveMarketChart(symbol, count, timeframe, 10);
             return;
         }
 
-        if (serverMode) {
-            System.out.println("🚀 Starting MT5 signal receiver server only...");
+        if (liveMode) {
+            System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
+            startDashboardServer();
             startForexBotServer();
-            return;
-        }
 
-        System.out.println("✅ Dataset ready: " + features.size() + " samples (noise filtered)");
-        System.out.println();
+            int liveCount = parseIntEnv("LIVE_CANDLES_COUNT", 220);
+            String liveTimeframe = System.getenv().getOrDefault("LIVE_TIMEFRAME", "M5");
 
-        // Walk-forward validation with Random Forest
-        System.out.println("🔬 Performing Walk-Forward Validation with Random Forest...");
-        int initialTrainSize = 100; // Start with 100 samples
-        int retrainInterval = 50;   // Retrain periodically instead of every candle
-        java.util.List<Integer> walkForwardPredictions = new ArrayList<>();
-        java.util.List<Integer> walkForwardActuals = new ArrayList<>();
-        java.util.List<Double> walkForwardReturns = new ArrayList<>();
-        double walkForwardNetPips = 0;
-        double spreadPips = 1.5;
-        double slippagePips = 0.2;
-
-        RandomForestClassifier walkModel = null;
-        NaiveBayesClassifier walkNbModel = null;
-        FeatureScaler walkScaler = null;
-
-        for (int i = initialTrainSize; i < rawFeatures.size() - 1; i++) {
-            if (i == initialTrainSize || i % retrainInterval == 0) {
-                // UPGRADE 1: Fix look-ahead bias with strict train-test split
-                // Never shuffle across train/test boundary; respect temporal order
-                java.util.List<double[]> trainFeatures = rawFeatures.subList(0, i);
-                java.util.List<Integer> trainLabels = labels.subList(0, i);
-                walkScaler = new FeatureScaler(NUM_FEATURES);
-                // FitTransform only on training data to avoid data leakage
-                java.util.List<double[]> scaledTrainFeatures = walkScaler.fitTransform(trainFeatures);
-
-                walkModel = new RandomForestClassifier(80, NUM_FEATURES);
-                walkModel.train(scaledTrainFeatures, trainLabels);
-                walkNbModel = new NaiveBayesClassifier(NUM_FEATURES);
-                walkNbModel.train(scaledTrainFeatures, trainLabels);
-                System.out.printf("   [Walk-Forward] Retrained on %d samples (strict temporal split: no shuffle)%n", i);
-            }
-
-            if (walkModel == null || walkNbModel == null || walkScaler == null) {
-                continue;
-            }
-
-            double[] scaledRow = walkScaler.transform(rawFeatures.get(i));
-            int pred = ensemblePredict(walkModel, walkNbModel, scaledRow);
-            walkForwardPredictions.add(pred);
-            walkForwardActuals.add(labels.get(i));
-
-            int originalIndex = candleIndexes.get(i);
-            SMCSignal signal = generateSMCSignal(candles, originalIndex, pred, 0.7);
-            double actualPips = simulateTradePips(candles, originalIndex, signal, spreadPips, slippagePips, 10);
-            walkForwardReturns.add(actualPips);
-            walkForwardNetPips += actualPips;
-        }
-
-        int correct = 0;
-        int wins = 0;
-        int losses = 0;
-        for (int i = 0; i < walkForwardPredictions.size(); i++) {
-            int pred = walkForwardPredictions.get(i);
-            double actualPips = walkForwardReturns.get(i);
-            int actualDirection = actualPips >= 0 ? 1 : 0;
-            if (actualPips == 0) {
-                if (pred == 0) {
-                    correct++;
-                }
-            } else if (actualDirection == pred) {
-                correct++;
-            }
-            if (actualPips > 0) {
-                wins++;
-            }
-            if (actualPips < 0) {
-                losses++;
-            }
-        }
-
-        double walkForwardAccuracy = walkForwardPredictions.isEmpty() ? 0 : (double) correct / walkForwardPredictions.size() * 100;
-        double winRate = walkForwardReturns.isEmpty() ? 0 : (double) wins / walkForwardReturns.size() * 100;
-        double walkForwardSharpe = calculateSharpe(walkForwardReturns);
-        double walkForwardMaxDrawdown = calculateMaxDrawdown(walkForwardReturns);
-        double profitFactor = calculateProfitFactor(walkForwardReturns);
-
-        System.out.println("🎯 Walk-Forward Accuracy: " + String.format("%.2f%%", walkForwardAccuracy));
-        System.out.println("🥇 Walk-Forward Win Rate: " + String.format("%.2f%%", winRate));
-        System.out.println("� Walk-Forward Loss Count: " + losses);
-        System.out.println("�💰 Walk-Forward Net: " + String.format("%.1f pips", walkForwardNetPips));
-        System.out.println("📉 Walk-Forward Max Drawdown: " + String.format("%.1f pips", walkForwardMaxDrawdown));
-        System.out.println("💎 Walk-Forward Sharpe: " + String.format("%.2f", walkForwardSharpe));
-        System.out.println("📈 Walk-Forward Profit Factor: " + String.format("%.2f", profitFactor));
-        System.out.println();
-
-        // Train final model on past data only and hold recent samples for realistic signal evaluation
-        int holdoutSamples = 5;
-        int trainingSize = Math.max(0, rawFeatures.size() - holdoutSamples);
-        java.util.List<double[]> finalTrainFeatures = rawFeatures.subList(0, trainingSize);
-        java.util.List<Integer> finalTrainLabels = labels.subList(0, trainingSize);
-        String trainingAsset = getTrainingAssetSymbol();
-        String modelFile = resolveModelPath(trainingAsset, "random_forest_model.bin");
-        String scalerFile = resolveModelPath(trainingAsset, "scaler_model.bin");
-        RandomForestClassifier model = null;
-        NaiveBayesClassifier nbModel = null;
-        FeatureScaler finalScaler = null;
-        String nbModelFile = resolveModelPath(trainingAsset, "naive_bayes_model.bin");
-
-        if (new java.io.File(modelFile).exists() && new java.io.File(scalerFile).exists()) {
-            try {
-                model = RandomForestClassifier.load(modelFile);
-                finalScaler = FeatureScaler.load(scalerFile);
-                System.out.println("✅ Loaded persisted model and scaler from disk for " + trainingAsset + ".");
-            } catch (Exception e) {
-                System.out.println("⚠️ Failed to load persisted model for " + trainingAsset + ", retraining: " + e.getMessage());
-            }
-        }
-
-        if (new java.io.File(nbModelFile).exists()) {
-            try {
-                nbModel = NaiveBayesClassifier.load(nbModelFile);
-                System.out.println("✅ Loaded persisted Naive Bayes model for " + trainingAsset + " from disk.");
-            } catch (Exception e) {
-                System.out.println("⚠️ Failed to load persisted Naive Bayes model for " + trainingAsset + ": " + e.getMessage());
-                nbModel = null;
-            }
-        }
-
-        if (model == null || finalScaler == null || nbModel == null) {
-            finalScaler = new FeatureScaler(NUM_FEATURES);
-            java.util.List<double[]> scaledFinalTrainFeatures = finalScaler.fitTransform(finalTrainFeatures);
-
-            if (model == null) {
-                model = new RandomForestClassifier(80, NUM_FEATURES);
-                model.train(scaledFinalTrainFeatures, finalTrainLabels);
-            }
-
-            if (nbModel == null) {
-                nbModel = new NaiveBayesClassifier(NUM_FEATURES);
-                nbModel.train(scaledFinalTrainFeatures, finalTrainLabels);
-            }
-
-            try {
-                model.save(modelFile);
-                nbModel.save(nbModelFile);
-                finalScaler.save(scalerFile);
-                System.out.println("💾 Persisted model, Naive Bayes, and scaler to disk for " + trainingAsset + ".");
-            } catch (Exception e) {
-                System.out.println("❌ Could not save model/scaler for " + trainingAsset + ": " + e.getMessage());
-            }
-            System.out.println("✅ Final ensemble models trained on past data only!");
-        }
-        printFeatureImportances(model);
-        System.out.println();
-
-        double estimatedSpreadPips = 1.2;
-        double estimatedSlippagePips = 0.2;
-        double executionCostPips = estimatedSpreadPips + estimatedSlippagePips;
-
-        // Make predictions on recent data with SMC analysis
-        System.out.println("📈 Recent Predictions (with Smart Money Concept):");
-        System.out.println("════════════════════════════════════════════════════════════");
-
-        java.util.List<TradeSignal> allSignals = new ArrayList<>();
-        int totalCandidates = 0;
-
-        try {
-            int startRecent = Math.max(0, features.size() - 5);
-            for (int i = startRecent; i < rawFeatures.size(); i++) {
-                double[] featureRow = rawFeatures.get(i);
-                double[] scaledRow = finalScaler.transform(featureRow);
-                int pred = ensemblePredict(model, nbModel, scaledRow);
-                double prob = ensembleProbability(model, nbModel, scaledRow);
-                System.out.printf("   Recent candidate %d => pred=%d prob=%.4f\n", i, pred, prob);
-                if (prob > 0.52) {
-                    // strong directional signal
-                } else if (prob < 0.48) {
-                    // strong directional signal for sell
-                } else {
-                    continue; // No-trade zone
-                }
-                // Relaxed live testing; keep any clearly directional candidate
-
-                totalCandidates++;
-
-                // Map back to the original candle index
-                int originalIndex = candleIndexes.get(i);
-
-                // Bounds check
-                if (originalIndex >= candles.size() || originalIndex < 20) {
-                    continue;
+            while (true) {
+                cloudCache.clear();
+                boolean forexClosed = isForexMarketClosed();
+                if (forexClosed) {
+                    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+                    System.out.printf("😴 Forex Market Closed (UTC: %s). Checking for crypto opportunities...%n",
+                            now.format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME));
                 }
 
-                // Evaluate market regime for context, but keep ranging candidates in live testing
-                String regime = detectMarketRegime(candles, originalIndex, 20);
-                if ("RANGING".equals(regime)) {
-                    System.out.printf("   ⚠️ Candidate %d is in ranging regime, keeping for live evaluation.\n", originalIndex);
-                }
+                java.util.List<String> liveSymbols = getLiveSymbols(args);
+                for (String symbol : liveSymbols) {
+                    if (forexClosed && !Fxausd.isCrypto(symbol)) {
+                        continue;
+                    }
 
-// Generate strategy-enhanced signal
-                SMCSignal smcSignal = comboMode
-                        ? generateCombinedSignal(candles, originalIndex, pred, prob, crtMode)
-                        : crtMode
-                                ? generateCRTSignal(candles, originalIndex, pred, prob)
-                                : generateSMCSignal(candles, originalIndex, pred, prob);
-                // Calculate signal strength
-                double strength = calculateSignalStrength(candles, originalIndex, pred, prob, smcSignal.confidence);
+                    System.out.println("\n🔍 [Audit] Scanning " + symbol + "...");
+                    CloudAPI.updateBotStatus("SCANNING", "Quantum QILH Scan: " + symbol);
+                    java.util.List<Candle> symbolCandles = fetchMarketCandles(symbol, liveCount, liveTimeframe);
+                    if (symbolCandles == null || symbolCandles.isEmpty()) {
+                        continue;
+                    }
 
-                // Calculate risk/reward with execution costs
-                double riskPips = convertPriceDiffToPips(smcSignal.symbol, Math.abs(smcSignal.entry - smcSignal.stopLoss));
-                double rewardPips = convertPriceDiffToPips(smcSignal.symbol, Math.abs(smcSignal.takeProfit - smcSignal.entry));
-                double adjustedRiskPips = riskPips + executionCostPips;
-                double adjustedRewardPips = rewardPips - executionCostPips;
+                    updateGlobalIntelligence(symbol, symbolCandles);
+                    java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
 
-                double pairPerfMult = tradeDatabase.getPairPerformanceMult(smcSignal.symbol);
-                double adaptiveMinMl = getAdaptiveMlThreshold(regime, pairPerfMult);
-                double adaptiveMinSmc = getAdaptiveSmcThreshold(regime, pairPerfMult);
-                double adaptiveMinRr = getAdaptiveRrThreshold(regime, pairPerfMult);
-                double adaptiveMinScore = MIN_COMBINED_SCORE;
-                if ("ranging".equals(regime)) {
-                    adaptiveMinScore += 5;
-                }
-                if (pairPerfMult < 0.95) {
-                    adaptiveMinScore += 3;
-                }
-
-                // Support both BUY and SELL candidates for live testing
-                if (prob < adaptiveMinMl) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: weak ML confidence %.2f (req %.2f)\n", originalIndex, prob, adaptiveMinMl);
-                    continue;
-                }
-                if (adjustedRiskPips <= 0 || adjustedRewardPips <= 0) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: invalid trade geometry (risk=%.2f, reward=%.2f)\n",
-                            originalIndex, adjustedRiskPips, adjustedRewardPips);
-                    continue; // Invalid trade geometry
-                }
-
-                double score = prob * 50 + (strength / 100.0) * 30 + smcSignal.confidence * 20;
-                if ("TRENDING".equals(regime)) {
-                    score += 10;
-                }
-                if (smcSignal.confidence < adaptiveMinSmc) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: insufficient combo confidence %.2f (req %.2f)\n",
-                            originalIndex, smcSignal.confidence, adaptiveMinSmc);
-                    continue;
-                }
-                if (adjustedRewardPips / adjustedRiskPips < adaptiveMinRr) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: weak risk/reward %.2f (req %.2f)\n",
-                            originalIndex, adjustedRewardPips / adjustedRiskPips, adaptiveMinRr);
-                    continue;
-                }
-                if (score < adaptiveMinScore) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: low combined score %.1f (req %.1f)\n", originalIndex, score, adaptiveMinScore);
-                    continue;
-                }
-                if ("RANGING".equals(regime) && score < adaptiveMinScore + 5) {
-                    System.out.printf("   ⚠️ Candidate %d rejected: ranging regime and weak score %.1f\n", originalIndex, score);
-                    continue;
-                }
-
-                // Create professional trade signal
-                TradeSignal signal = new TradeSignal(
-                        smcSignal.symbol, smcSignal.direction, smcSignal.entry, smcSignal.stopLoss, smcSignal.takeProfit,
-                        prob, smcSignal.confidence, strength, smcSignal.smcReason, adjustedRiskPips, adjustedRewardPips,
-                        featureRow, regime, originalIndex
-                );
-                allSignals.add(signal);
-
-                // Display signal with enhanced metrics
-                String strengthBar = buildStrengthBar(strength);
-                System.out.printf("\n🎯 Signal #%d: %s\n", allSignals.size(), smcSignal.direction);
-                System.out.printf("   Entry: %.4f | SL: %.4f | TP: %.4f\n", signal.entry, signal.stopLoss, signal.takeProfit);
-                System.out.printf("   ML: %.2f%% | SMC: %.2f%% | Strength: %s %.2f%%\n",
-                        prob * 100, smcSignal.confidence * 100, strengthBar, strength);
-                System.out.printf("   Risk: %.2f pips | Reward: %.2f pips | R:R: %.2f:1\n",
-                        signal.riskAmount, signal.rewardAmount, signal.riskRewardRatio);
-                System.out.printf("   Reason: %s\n", signal.reason);
-
-                // Additional SMC context
-                int structure = detectMarketStructure(candles, originalIndex, 20);
-                double orderBlock = detectOrderBlock(candles, originalIndex, 10);
-                double liquidity = detectLiquidityZone(candles, originalIndex, 10);
-
-                String structureStr = structure == 1 ? "📈 Uptrend" : structure == -1 ? "📉 Downtrend" : "↔️  Consolidation";
-                System.out.printf("   Regime: %s | Structure: %s | Order Block: %.0f%% | Liquidity: %.0f%%\n",
-                        regime, structureStr, orderBlock * 100, liquidity * 100);
-            }
-        } catch (Exception e) {
-            System.out.println("Error in SMC predictions: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        if (liveMode && debugMode) {
-            System.out.println("\n🔍 LIVE DEBUG PREVIEW: High-confidence combo signals only");
-            int previewCount = 0;
-            for (TradeSignal signal : allSignals) {
-                if (signal.mlConfidence >= DEBUG_MIN_ML_CONFIDENCE && signal.smcConfluence >= DEBUG_MIN_SMC_CONFIDENCE && signal.signalStrength >= DEBUG_MIN_SIGNAL_STRENGTH) {
-                    previewCount++;
-                    System.out.printf("   [%d] %s %s entry=%.5f SL=%.5f TP=%.5f ML=%.1f%% SMC=%.1f%% strength=%.1f%% R:R=%.2f\n",
-                            previewCount, signal.symbol, signal.direction, signal.entry, signal.stopLoss, signal.takeProfit,
-                            signal.mlConfidence * 100, signal.smcConfluence * 100, signal.signalStrength, signal.riskRewardRatio);
-                }
-            }
-            if (previewCount == 0) {
-                System.out.println("   No high-confidence combo signals found in live debug preview.");
-                java.util.List<TradeSignal> fallback = new ArrayList<>(allSignals);
-                fallback.sort((a, b) -> Double.compare(computePreviewScore(b), computePreviewScore(a)));
-                int shown = Math.min(DEBUG_PREVIEW_MAX, fallback.size());
-                if (shown > 0) {
-                    System.out.println("   Showing top " + shown + " best available preview candidates instead:");
-                    for (int i = 0; i < shown; i++) {
-                        TradeSignal signal = fallback.get(i);
-                        System.out.printf("   [%d] %s %s entry=%.5f SL=%.5f TP=%.5f ML=%.1f%% SMC=%.1f%% strength=%.1f%% R:R=%.2f score=%.1f\n",
-                                i + 1, signal.symbol, signal.direction, signal.entry, signal.stopLoss, signal.takeProfit,
-                                signal.mlConfidence * 100, signal.smcConfluence * 100, signal.signalStrength, signal.riskRewardRatio,
-                                computePreviewScore(signal));
+                    if (!eliteSignals.isEmpty()) {
+                        System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
+                        sendLiveSignals(eliteSignals);
+                    } else {
+                        System.out.println("⏳ [Idle] " + symbol + ": Monitoring fractal for A+ confluence...");
                     }
                 }
-            } else {
-                System.out.println("   High-confidence preview count: " + previewCount);
+                int sleepMins = forexClosed ? 15 : 3;
+                System.out.println("💤 Scan complete. Sleeping for " + sleepMins + " minutes...");
+                Thread.sleep(60000 * sleepMins);
             }
-            System.out.println("🔍 End live debug preview.\n");
-        }
-        if (liveMode) {
-            System.out.println("🔒 Applying precision filter for A+ trades...");
-            allSignals = PrecisionFilter.filter(allSignals, estimatedSpreadPips);
-            System.out.println("🔒 Precision filter retained " + allSignals.size() + " A+ candidate(s).\n");
-        }
-        if (liveMode && allSignals.size() > MAX_LIVE_SIGNALS) {
-            allSignals.sort((a, b) -> Double.compare(computePreviewScore(b), computePreviewScore(a)));
-            System.out.println("🔧 Limiting live execution to top " + MAX_LIVE_SIGNALS + " unique-symbol signal(s) by combined quality score.");
-            allSignals = selectTopUniqueSymbolSignals(allSignals, MAX_LIVE_SIGNALS);
-        }
-        System.out.println("📊 Candidate signals: " + totalCandidates + " | Selected: " + allSignals.size()
-                + String.format(" (%.1f%% selection rate)", totalCandidates > 0 ? (allSignals.size() * 100.0 / totalCandidates) : 0.0));
-
-        System.out.println("\n════════════════════════════════════════════════════════════");
-        System.out.println("📊 PERFORMANCE METRICS:");
-        System.out.println("════════════════════════════════════════════════════════════");
-        PerformanceMetrics metrics = new PerformanceMetrics(allSignals);
-        System.out.println(metrics.summary);
-
-        System.out.println("\n════════════════════════════════════════════════════════════");
-        System.out.println("💰 RISK MANAGEMENT SUMMARY:");
-        System.out.println("════════════════════════════════════════════════════════════");
-        RiskManagement riskMgmt = new RiskManagement(10000, allSignals); // $10,000 account
-        System.out.println(riskMgmt.riskSummary);
-
-        System.out.println("\n════════════════════════════════════════════════════════════");
-        System.out.println("� RUNNING BACKTEST WITH TRANSACTION COSTS...");
-        System.out.println("════════════════════════════════════════════════════════════");
-        // Backtest evaluation skipped in live-only mode.
-        // Backtester.BacktestResult backtestResult = Backtester.runBacktest("EURUSD", candles, 80, 16);
-        // System.out.println(backtestResult);
-
-        System.out.println("\n════════════════════════════════════════════════════════════");
-        System.out.println("�💾 EXPORTING SIGNALS...");
-        System.out.println("════════════════════════════════════════════════════════════");
-        exportSignalsToCSV(allSignals, "forex_signals_export.csv");
-
-        System.out.println("\n✅ Analysis Complete! All signals exported to CSV file.");
-
-        if (liveMode) {
-            if (allSignals.isEmpty()) {
-                System.out.println("⚠️ No live signals were generated for MT5.");
-            } else if (confirmLiveExecution(allSignals)) {
-                ExecutionEngine engine = new ExecutionEngine(10000, new AdaptiveRiskManager());
-                engine.executeSignals(allSignals, candles, recentTradeRecords);
-                TradeAnalytics.AnalyticsReport analytics = TradeAnalytics.analyze(new ArrayList<>(recentTradeRecords));
-                System.out.println(analytics.toString());
-                TradeAnalytics.exportMonthlyAnalytics(recentTradeRecords, "monthly_analytics.csv");
-            } else {
-                System.out.println("⚠️ Live execution canceled by confirmation tool.");
-            }
-            startForexBotServer();
         }
     }
 
@@ -2044,17 +1507,17 @@ public class Fxausd {
 
             // Push to Mobile App (Cloud Ready)
             MobileSignalBridge.sendToMobile(
-                signal.symbol, 
-                signal.direction, 
-                signal.entry, 
-                signal.takeProfit, 
-                signal.stopLoss, 
-                signal.mlConfidence, 
-                signal.signalStrength,
-                signal.reason,
-                signal.riskRewardRatio,
-                signal.session,
-                signal.setupType
+                    signal.symbol,
+                    signal.direction,
+                    signal.entry,
+                    signal.takeProfit,
+                    signal.stopLoss,
+                    signal.mlConfidence,
+                    signal.signalStrength,
+                    signal.reason,
+                    signal.riskRewardRatio,
+                    signal.session,
+                    signal.setupType
             );
 
             // Push to MT5 (Execution)
@@ -2218,11 +1681,11 @@ public class Fxausd {
                 if (!readResponse(reader, 334)) {
                     return false;
                 }
-                sendCommand(writer, Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8)));
+                sendCommand(writer, java.util.Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8)));
                 if (!readResponse(reader, 334)) {
                     return false;
                 }
-                sendCommand(writer, Base64.getEncoder().encodeToString(password.getBytes(StandardCharsets.UTF_8)));
+                sendCommand(writer, java.util.Base64.getEncoder().encodeToString(password.getBytes(StandardCharsets.UTF_8)));
                 if (!readResponse(reader, 235)) {
                     return false;
                 }
@@ -2338,13 +1801,17 @@ public class Fxausd {
     public static boolean isHighImpactNewsWindow() {
         // 1. Check API-based News Calendar
         String apiUrl = fetchForexNewsCalendarApiUrl();
-        if (apiUrl != null && getActiveHighImpactNewsEventTag(apiUrl) != null) return true;
+        if (apiUrl != null && getActiveHighImpactNewsEventTag(apiUrl) != null) {
+            return true;
+        }
 
         // 2. Check Static News Blocklist (NFP: 1st Friday 13:30 UTC)
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         if (nowUtc.getDayOfWeek() == DayOfWeek.FRIDAY && nowUtc.getHour() == 13) {
-             // Simple logic: if it's Friday 13:xx and the day is between 1 and 7, it's likely NFP Friday
-             if (nowUtc.getDayOfMonth() <= 7) return true;
+            // Simple logic: if it's Friday 13:xx and the day is between 1 and 7, it's likely NFP Friday
+            if (nowUtc.getDayOfMonth() <= 7) {
+                return true;
+            }
         }
 
         // 3. Manual override
@@ -2609,7 +2076,7 @@ public class Fxausd {
         }
 
         java.util.List<String> endpoints = getMt5ChartEndpoints();
-        
+
         // Add full URL overrides from environment if present
         String envChartUrl = System.getenv("MT5_CHART_URL");
         if (envChartUrl != null && !envChartUrl.isBlank()) {
@@ -2686,7 +2153,7 @@ public class Fxausd {
 
     public static List<Candle> fetchCloudCandles(String symbol, int count, String timeframe, String apiKey) {
         String cacheKey = symbol + "_" + timeframe + "_" + count;
-        
+
         if (premiumSymbols.contains(symbol)) {
             System.out.println("⏩ [Skip] " + symbol + " requires a paid Twelve Data plan. Skipping...");
             return new ArrayList<>();
@@ -2705,7 +2172,9 @@ public class Fxausd {
                 // We sleep 7.5s between requests to stay exactly on the limit (60/8 = 7.5s).
                 // Exponential backoff on retries.
                 long waitTime = 7600 * attempt;
-                if (attempt > 1) System.out.println("⏳ [Retry] Twelve Data attempt " + attempt + " in " + waitTime + "ms...");
+                if (attempt > 1) {
+                    System.out.println("⏳ [Retry] Twelve Data attempt " + attempt + " in " + waitTime + "ms...");
+                }
                 Thread.sleep(waitTime);
 
                 // 1. Correct Timeframe Mapping
@@ -2729,15 +2198,15 @@ public class Fxausd {
 
                 String urlStr = String.format("https://api.twelvedata.com/time_series?symbol=%s&interval=%s&outputsize=%d&apikey=%s",
                         URLEncoder.encode(cloudSymbol, "UTF-8"), interval, count, apiKey);
-                
+
                 URL url = new URL(urlStr);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(15000);
-                
+
                 int status = conn.getResponseCode();
-                
+
                 if (status == 429) {
                     System.out.println("⚠️ [Rate Limit] Twelve Data 429 received. Waiting longer...");
                     Thread.sleep(15000 * attempt);
@@ -2747,34 +2216,37 @@ public class Fxausd {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(status == 200 ? conn.getInputStream() : conn.getErrorStream()))) {
                     StringBuilder sb = new StringBuilder();
                     String line;
-                    while ((line = reader.readLine()) != null) sb.append(line);
-                    
-                    Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>(){}.getType());
-                    
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                    }
+
+                    Map<String, Object> map = new Gson().fromJson(sb.toString(), new TypeToken<Map<String, Object>>() {
+                    }.getType());
+
                     if (!"ok".equals(map.get("status"))) {
                         String msg = (String) map.get("message");
                         System.err.println("❌ Twelve Data API Error for " + symbol + ": " + msg);
-                        
+
                         if (msg != null && (msg.contains("plan") || msg.contains("Grow") || msg.contains("Venture"))) {
                             premiumSymbols.add(symbol);
                         }
                         return list;
                     }
                     List<Map<String, String>> values = (List<Map<String, String>>) map.get("values");
-                    
+
                     if (values != null) {
                         for (Map<String, String> v : values) {
                             list.add(0, new Candle(
-                                Double.parseDouble(v.get("open")),
-                                Double.parseDouble(v.get("high")),
-                                Double.parseDouble(v.get("low")),
-                                Double.parseDouble(v.get("close")),
-                                v.containsKey("volume") ? Double.parseDouble(v.get("volume")) : 0.0
+                                    Double.parseDouble(v.get("open")),
+                                    Double.parseDouble(v.get("high")),
+                                    Double.parseDouble(v.get("low")),
+                                    Double.parseDouble(v.get("close")),
+                                    v.containsKey("volume") ? Double.parseDouble(v.get("volume")) : 0.0
                             ));
                         }
                     }
                 }
-                
+
                 if (!list.isEmpty()) {
                     System.out.println("☁️ [Cloud Data] Successfully fetched " + list.size() + " candles for " + symbol);
                     cloudCache.put(cacheKey, list);
@@ -2782,7 +2254,9 @@ public class Fxausd {
                 }
             } catch (Exception e) {
                 System.err.println("❌ Twelve Data fetch error (Attempt " + attempt + "): " + e.getMessage());
-                if (attempt == maxRetries) break;
+                if (attempt == maxRetries) {
+                    break;
+                }
             }
         }
         return list;
@@ -2790,7 +2264,7 @@ public class Fxausd {
 
     public static List<String> fetchAvailableSymbols() {
         java.util.List<String> endpoints = getMt5SymbolsEndpoints();
-        
+
         // Add full URL overrides from environment if present
         String envSymbolsUrl = System.getenv("MT5_SYMBOLS_URL");
         if (envSymbolsUrl != null && !envSymbolsUrl.isBlank()) {
@@ -3188,7 +2662,9 @@ public class Fxausd {
     }
 
     public static double getPipValue(String symbol) {
-        if (symbol == null) return 10.0;
+        if (symbol == null) {
+            return 10.0;
+        }
         String upper = symbol.toUpperCase();
         if (upper.contains("XAU") || upper.contains("GOLD")) {
             return 1.0;
@@ -3441,17 +2917,17 @@ public class Fxausd {
 
         boolean htfBullish = "UP".equals(htf.trend) || forceSignal;
         boolean htfBearish = "DOWN".equals(htf.trend) || forceSignal;
-        
+
         // Premium High Win Rate Filters
         boolean rsiBullish = currentRsi <= (sniperMode ? 30.0 : RSI_OVERSOLD_ZONE) || forceSignal;
         boolean rsiBearish = currentRsi >= (sniperMode ? 70.0 : RSI_OVERBOUGHT_ZONE) || forceSignal;
-        
+
         boolean momentumBullish = momentum > (sniperMode ? MIN_SIGNAL_MOMENTUM * 1.5 : MIN_SIGNAL_MOMENTUM);
         boolean momentumBearish = momentum < -(sniperMode ? MIN_SIGNAL_MOMENTUM * 1.5 : MIN_SIGNAL_MOMENTUM);
-        
+
         boolean orderBlockValid = orderBlock >= (sniperMode ? 0.85 : (isGoldSymbol(symbol) ? 0.75 : 0.70)) || forceSignal;
         boolean breakerValid = Math.abs(breakerBlock) >= (sniperMode ? 0.75 : 0.65) || forceSignal;
-        
+
         boolean sweepAligned = !sniperMode || detectLiquiditySweep(candles, lastIndex);
 
         boolean buySignal = htfBullish && uptrend && rsiBullish && momentumBullish && orderBlockValid && breakerValid && sweepAligned;
@@ -3507,49 +2983,69 @@ public class Fxausd {
     // INSTITUTIONAL INTELLIGENCE ENGINE (BOS, CHoCH, LIQUIDITY)
     // ===============================
     public static double calculateInstitutionalDisplacement(java.util.List<Candle> data, int index) {
-        if (index < 5) return 0.0;
+        if (index < 5) {
+            return 0.0;
+        }
         double atr = calculateATR(data, index, 14);
         double bodySize = Math.abs(data.get(index).close - data.get(index).open);
         return bodySize / Math.max(0.0001, atr);
     }
 
     public static int detectBOS(java.util.List<Candle> data, int index) {
-        if (index < 50) return 0;
+        if (index < 50) {
+            return 0;
+        }
         double close = data.get(index).close;
 
         // Major BOS (30-bar swing)
         double majorHigh = getRecentHigh(data, index - 30, index - 1);
         double majorLow = getRecentLow(data, index - 30, index - 1);
-        if (close > majorHigh) return 1;
-        if (close < majorLow) return -1;
+        if (close > majorHigh) {
+            return 1;
+        }
+        if (close < majorLow) {
+            return -1;
+        }
 
         // Internal BOS (10-bar swing - Mistake #3)
         double internalHigh = getRecentHigh(data, index - 10, index - 1);
         double internalLow = getRecentLow(data, index - 10, index - 1);
-        if (close > internalHigh) return 1;
-        if (close < internalLow) return -1;
+        if (close > internalHigh) {
+            return 1;
+        }
+        if (close < internalLow) {
+            return -1;
+        }
 
         return 0;
     }
 
     public static int detectCHoCH(java.util.List<Candle> data, int index) {
         // Change of Character happens when price breaks the opposite swing point
-        if (index < 60) return 0;
+        if (index < 60) {
+            return 0;
+        }
         int structure = detectMarketStructure(data, index - 5, 20);
         int currentBOS = detectBOS(data, index);
-        
-        if (structure == -1 && currentBOS == 1) return 1; // Bullish CHoCH (Trend reversal to UP)
-        if (structure == 1 && currentBOS == -1) return -1; // Bearish CHoCH (Trend reversal to DOWN)
+
+        if (structure == -1 && currentBOS == 1) {
+            return 1; // Bullish CHoCH (Trend reversal to UP)
+        }
+        if (structure == 1 && currentBOS == -1) {
+            return -1; // Bearish CHoCH (Trend reversal to DOWN)
+        }
         return 0;
     }
 
     // --- INSTITUTIONAL VOLUME PROFILE ---
     public static double calculateVolumeImbalance(java.util.List<Candle> data, int index) {
-        if (index < 5) return 0.0;
+        if (index < 5) {
+            return 0.0;
+        }
         double currentVol = data.get(index).volume;
         double avgVol = calculateAverageVolume(data, index - 1, 20);
         double bodySize = Math.abs(data.get(index).close - data.get(index).open);
-        
+
         // Large candle body with extreme volume indicates Bank intervention
         if (currentVol > avgVol * 1.5 && bodySize > calculateATR(data, index, 14) * 1.2) {
             return (data.get(index).close > data.get(index).open) ? 1.0 : -1.0;
@@ -3559,17 +3055,23 @@ public class Fxausd {
 
     // --- ORDER FLOW SENTIMENT ENGINE ---
     public static double calculateOrderFlowIntensity(java.util.List<Candle> data, int index) {
-        if (index < 10) return 0.5;
+        if (index < 10) {
+            return 0.5;
+        }
         int bullishPressure = 0;
         int bearishPressure = 0;
-        
+
         for (int i = index - 10; i <= index; i++) {
             Candle c = data.get(i);
             double wickUpper = c.high - Math.max(c.open, c.close);
             double wickLower = Math.min(c.open, c.close) - c.low;
-            
-            if (c.close > c.open && wickLower > wickUpper) bullishPressure++;
-            if (c.close < c.open && wickUpper > wickLower) bearishPressure++;
+
+            if (c.close > c.open && wickLower > wickUpper) {
+                bullishPressure++;
+            }
+            if (c.close < c.open && wickUpper > wickLower) {
+                bearishPressure++;
+            }
         }
 
         return (double) bullishPressure / (bullishPressure + bearishPressure + 1);
@@ -3577,7 +3079,9 @@ public class Fxausd {
 
     // --- MAXIMUM INTELLIGENCE: VWAP ANCHOR ---
     public static double calculateVWAP(java.util.List<Candle> data, int index, int lookback) {
-        if (index < lookback) return data.get(index).close;
+        if (index < lookback) {
+            return data.get(index).close;
+        }
         double sumPV = 0;
         double sumV = 0;
         for (int i = index - lookback; i <= index; i++) {
@@ -3591,15 +3095,21 @@ public class Fxausd {
 
     // --- MAXIMUM INTELLIGENCE: EXHAUSTION DETECTOR ---
     public static boolean detectExhaustionDivergence(java.util.List<Candle> data, int index, boolean bullish) {
-        if (index < 10) return false;
+        if (index < 10) {
+            return false;
+        }
         double currentHigh = data.get(index).high;
         double prevHigh = getRecentHigh(data, index - 10, index - 1);
         double currentVol = data.get(index).volume;
         double avgVol = calculateAverageVolume(data, index, 10);
-        
+
         // Exhaustion: New price extreme on significantly lower volume
-        if (bullish && currentHigh > prevHigh && currentVol < avgVol * 0.7) return true;
-        if (!bullish && data.get(index).low < getRecentLow(data, index - 10, index - 1) && currentVol < avgVol * 0.7) return true;
+        if (bullish && currentHigh > prevHigh && currentVol < avgVol * 0.7) {
+            return true;
+        }
+        if (!bullish && data.get(index).low < getRecentLow(data, index - 10, index - 1) && currentVol < avgVol * 0.7) {
+            return true;
+        }
         return false;
     }
 
@@ -3619,11 +3129,11 @@ public class Fxausd {
         double liq = detectLiquidityZone(candles, last, 20);
         double imbalance = calculateVolumeImbalance(candles, last);
         double orderFlow = calculateOrderFlowIntensity(candles, last);
-        
+
         // Sentiment Analysis logic
         double rsi = calculateRSI(candles, last, 14);
         double atr = calculateATR(candles, last, 14);
-        
+
         currentIntel.bos = bos != 0;
         currentIntel.choch = choch != 0;
         currentIntel.liquidityScore = liq;
@@ -3635,26 +3145,41 @@ public class Fxausd {
         currentIntel.institutionalDisplacement = calculateInstitutionalDisplacement(candles, last);
         currentIntel.institutionalPressure = calculateOrderFlowIntensity(candles, last) * 100;
         currentIntel.heartbeat = currentIntel.institutionalDisplacement > 1.2 ? "HIGH_VOLATILITY" : "STABLE";
-        
-        if (bos == 1 || choch == 1) currentIntel.bias = "INSTITUTIONAL BULLISH";
-        else if (bos == -1 || choch == -1) currentIntel.bias = "INSTITUTIONAL BEARISH";
-        else if (rsi > 45 && rsi < 55) currentIntel.bias = "CHOPPY/RANGING";
-        else currentIntel.bias = "NEUTRAL";
-        
+
+        if (bos == 1 || choch == 1) {
+            currentIntel.bias = "INSTITUTIONAL BULLISH";
+        } else if (bos == -1 || choch == -1) {
+            currentIntel.bias = "INSTITUTIONAL BEARISH";
+        } else if (rsi > 45 && rsi < 55) {
+            currentIntel.bias = "CHOPPY/RANGING";
+        } else {
+            currentIntel.bias = "NEUTRAL";
+        }
+
         // World Bank Setup Quality Logic
         double strength = (ob * 30) + (liq * 20) + (Math.abs(imbalance) * 25) + (orderFlow * 25);
-        if (strength > 90) currentIntel.setupQuality = "🏦 WORLD BANK (99%+)";
-        else if (strength > 82) currentIntel.setupQuality = "💎 DIAMOND (95%+)";
-        else if (strength > 70) currentIntel.setupQuality = "🥇 GOLD (85%+)";
-        else currentIntel.setupQuality = "🥈 SILVER (70%+)";
+        if (strength > 90) {
+            currentIntel.setupQuality = "🏦 WORLD BANK (99%+)";
+        } else if (strength > 82) {
+            currentIntel.setupQuality = "💎 DIAMOND (95%+)";
+        } else if (strength > 70) {
+            currentIntel.setupQuality = "🥇 GOLD (85%+)";
+        } else {
+            currentIntel.setupQuality = "🥈 SILVER (70%+)";
+        }
 
         // Update Session
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         int hour = nowUtc.getHour();
-        if (hour >= 7 && hour < 12) currentIntel.session = "LONDON SESSION (HIGH VOL)";
-        else if (hour >= 12 && hour < 16) currentIntel.session = "LONDON/NY OVERLAP (PEAK VOL)";
-        else if (hour >= 16 && hour < 21) currentIntel.session = "NY SESSION (MODERATE)";
-        else currentIntel.session = "ASIA/TOKYO (LOW VOL)";
+        if (hour >= 7 && hour < 12) {
+            currentIntel.session = "LONDON SESSION (HIGH VOL)";
+        } else if (hour >= 12 && hour < 16) {
+            currentIntel.session = "LONDON/NY OVERLAP (PEAK VOL)";
+        } else if (hour >= 16 && hour < 21) {
+            currentIntel.session = "NY SESSION (MODERATE)";
+        } else {
+            currentIntel.session = "ASIA/TOKYO (LOW VOL)";
+        }
     }
 
     // ========================================================================
@@ -3662,8 +3187,10 @@ public class Fxausd {
     // ========================================================================
     private static java.util.List<TradeSignal> generateEliteQuantumSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
-        if (candles == null || candles.size() < 200) return signals;
-        
+        if (candles == null || candles.size() < 200) {
+            return signals;
+        }
+
         // --- 10. NEWS FILTER ---
         if (isHighImpactNewsWindow()) {
             System.out.println("⚠️ News window active - suppressing setup generation for " + symbol);
@@ -3674,19 +3201,25 @@ public class Fxausd {
         Candle current = candles.get(last);
         double price = current.close;
         double atr = calculateATR(candles, last, 14);
-        
+
         // --- 9. DYNAMIC SPREAD FILTER ---
         double currentSpread = getCurrentSpreadPips(symbol);
         double maxAllowedSpread;
-        if (symbol.equalsIgnoreCase("XAUUSD")) maxAllowedSpread = 30.0;
-        else if (symbol.equalsIgnoreCase("EURUSD")) maxAllowedSpread = 1.2;
-        else if (symbol.equalsIgnoreCase("GBPUSD")) maxAllowedSpread = 1.5;
-        else if (symbol.equalsIgnoreCase("GBPJPY")) maxAllowedSpread = 2.5;
-        else maxAllowedSpread = Math.max(2.0, atr * 0.3);
+        if (symbol.equalsIgnoreCase("XAUUSD")) {
+            maxAllowedSpread = 30.0;
+        } else if (symbol.equalsIgnoreCase("EURUSD")) {
+            maxAllowedSpread = 1.2;
+        } else if (symbol.equalsIgnoreCase("GBPUSD")) {
+            maxAllowedSpread = 1.5;
+        } else if (symbol.equalsIgnoreCase("GBPJPY")) {
+            maxAllowedSpread = 2.5;
+        } else {
+            maxAllowedSpread = Math.max(2.0, atr * 0.3);
+        }
 
         if (currentSpread > maxAllowedSpread) {
-             System.out.printf("⏩ [Skip] %s: Spread too wide (%.2f > %.2f)\n", symbol, currentSpread, maxAllowedSpread);
-             return signals;
+            System.out.printf("⏩ [Skip] %s: Spread too wide (%.2f > %.2f)\n", symbol, currentSpread, maxAllowedSpread);
+            return signals;
         }
 
         // --- GLOBAL MACRO BIAS AUDIT ---
@@ -3701,7 +3234,7 @@ public class Fxausd {
         boolean sweepSell = sweepSignal == -1;
         double orderFlow = calculateOrderFlowIntensity(candles, last);
         double vwap = calculateVWAP(candles, last, 20);
-        
+
         // --- UPGRADED SCORING SYSTEM ---
         int buyScore = 0;
         int sellScore = 0;
@@ -3709,46 +3242,105 @@ public class Fxausd {
         StringBuilder sellAudit = new StringBuilder("   [SELL Audit] ");
 
         // H4 Trend (25 pts)
-        if (h4.trend.equals("UP")) { buyScore += 25; buyAudit.append("H4:PASS "); } else { buyAudit.append("H4:FAIL "); }
-        if (h4.trend.equals("DOWN")) { sellScore += 25; sellAudit.append("H4:PASS "); } else { sellAudit.append("H4:FAIL "); }
+        if (h4.trend.equals("UP")) {
+            buyScore += 25;
+            buyAudit.append("H4:PASS ");
+        } else {
+            buyAudit.append("H4:FAIL ");
+        }
+        if (h4.trend.equals("DOWN")) {
+            sellScore += 25;
+            sellAudit.append("H4:PASS ");
+        } else {
+            sellAudit.append("H4:FAIL ");
+        }
 
         // H1 Trend (20 pts) - only directional momentum passes
-        if (h1.trend.equals("UP")) { buyScore += 20; buyAudit.append("H1:PASS "); } else { buyAudit.append("H1:FAIL "); }
-        if (h1.trend.equals("DOWN")) { sellScore += 20; sellAudit.append("H1:PASS "); } else { sellAudit.append("H1:FAIL "); }
+        if (h1.trend.equals("UP")) {
+            buyScore += 20;
+            buyAudit.append("H1:PASS ");
+        } else {
+            buyAudit.append("H1:FAIL ");
+        }
+        if (h1.trend.equals("DOWN")) {
+            sellScore += 20;
+            sellAudit.append("H1:PASS ");
+        } else {
+            sellAudit.append("H1:FAIL ");
+        }
 
         // Local Trigger (BOS/CHoCH/Sweep)
         boolean buyTrigger = bos == 1 || choch == 1 || sweepBuy;
         boolean sellTrigger = bos == -1 || choch == -1 || sweepSell;
-        if (buyTrigger) { buyScore += 30; buyAudit.append("TRIG:PASS "); } else { buyAudit.append("TRIG:FAIL "); }
-        if (sellTrigger) { sellScore += 30; sellAudit.append("TRIG:PASS "); } else { sellAudit.append("TRIG:FAIL "); }
+        if (buyTrigger) {
+            buyScore += 30;
+            buyAudit.append("TRIG:PASS ");
+        } else {
+            buyAudit.append("TRIG:FAIL ");
+        }
+        if (sellTrigger) {
+            sellScore += 30;
+            sellAudit.append("TRIG:PASS ");
+        } else {
+            sellAudit.append("TRIG:FAIL ");
+        }
 
         // VWAP Confirmation (10 pts)
-        if (price > vwap) { buyScore += 10; buyAudit.append("VWAP:PASS "); } else { buyAudit.append("VWAP:FAIL "); }
-        if (price < vwap) { sellScore += 10; sellAudit.append("VWAP:PASS "); } else { sellAudit.append("VWAP:FAIL "); }
+        if (price > vwap) {
+            buyScore += 10;
+            buyAudit.append("VWAP:PASS ");
+        } else {
+            buyAudit.append("VWAP:FAIL ");
+        }
+        if (price < vwap) {
+            sellScore += 10;
+            sellAudit.append("VWAP:PASS ");
+        } else {
+            sellAudit.append("VWAP:FAIL ");
+        }
 
         // Order Flow Confirmation
-        if (orderFlow > 0.55) { buyScore += 10; buyAudit.append("FLOW:PASS "); } else { buyAudit.append("FLOW:FAIL "); }
-        if (orderFlow < 0.45) { sellScore += 10; sellAudit.append("FLOW:PASS "); } else { sellAudit.append("FLOW:FAIL "); }
+        if (orderFlow > 0.55) {
+            buyScore += 10;
+            buyAudit.append("FLOW:PASS ");
+        } else {
+            buyAudit.append("FLOW:FAIL ");
+        }
+        if (orderFlow < 0.45) {
+            sellScore += 10;
+            sellAudit.append("FLOW:PASS ");
+        } else {
+            sellAudit.append("FLOW:FAIL ");
+        }
 
         // Killzone Bonus (+15 Mistake #5)
         if (isWithinKillzone()) {
-             buyScore += 15; sellScore += 15;
-             buyAudit.append("KZ:BONUS "); sellAudit.append("KZ:BONUS ");
+            buyScore += 15;
+            sellScore += 15;
+            buyAudit.append("KZ:BONUS ");
+            sellAudit.append("KZ:BONUS ");
         }
 
         // Regime Bonus (Mistake #6)
         String regime = detectMarketRegime(candles, last, 30);
         if (regime.equals("TRENDING")) {
-             buyScore += 10; sellScore += 10;
-             buyAudit.append("REG:TREND "); sellAudit.append("REG:TREND ");
+            buyScore += 10;
+            sellScore += 10;
+            buyAudit.append("REG:TREND ");
+            sellAudit.append("REG:TREND ");
         } else if (regime.equals("VOLATILE")) {
-             buyScore += 5; sellScore += 5;
-             buyAudit.append("REG:VOLATILE "); sellAudit.append("REG:VOLATILE ");
+            buyScore += 5;
+            sellScore += 5;
+            buyAudit.append("REG:VOLATILE ");
+            sellAudit.append("REG:VOLATILE ");
         } else if (regime.equals("ACCUMULATION") || regime.equals("DISTRIBUTION")) {
-             buyScore += 5; sellScore += 5;
-             buyAudit.append("REG:ACC/DIST "); sellAudit.append("REG:ACC/DIST ");
+            buyScore += 5;
+            sellScore += 5;
+            buyAudit.append("REG:ACC/DIST ");
+            sellAudit.append("REG:ACC/DIST ");
         } else {
-             buyAudit.append("REG:RANGE "); sellAudit.append("REG:RANGE ");
+            buyAudit.append("REG:RANGE ");
+            sellAudit.append("REG:RANGE ");
         }
 
         double pairPerf = tradeDatabase.getPairPerformanceMult(symbol);
@@ -3766,13 +3358,13 @@ public class Fxausd {
         } else {
             direction = "NONE";
         }
-        
+
         System.out.println(buyAudit.toString() + " -> " + buyScore);
         System.out.println(sellAudit.toString() + " -> " + sellScore);
 
         if (direction.equals("NONE")) {
-             System.out.printf("   ⏳ [Audit] %s No setup: Max Score %d (Req: %d, Regime: %s)%n", symbol, finalScore, minSetupScore, regime);
-             return signals;
+            System.out.printf("   ⏳ [Audit] %s No setup: Max Score %d (Req: %d, Regime: %s)%n", symbol, finalScore, minSetupScore, regime);
+            return signals;
         }
 
         double strength = Math.min(100.0, finalScore);
@@ -3804,10 +3396,10 @@ public class Fxausd {
         // Dynamic SL/TP based on pair volatility and structure
         double maxSl = getPairStopLossPips(symbol);
         double minSl = (symbol.equalsIgnoreCase("XAUUSD")) ? 25.0 : 8.0;
-        
-        double sl = Math.max(minSl, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last-15, last)) : (getRecentHigh(candles, last-15, last) - price)));
-        sl = Math.min(sl, maxSl); 
-        
+
+        double sl = Math.max(minSl, convertPriceDiffToPips(symbol, direction.equals("BUY") ? (price - getRecentLow(candles, last - 15, last)) : (getRecentHigh(candles, last - 15, last) - price)));
+        sl = Math.min(sl, maxSl);
+
         // UPGRADE 3: Structure-based TP (instead of fixed 5x)
         // Scan next 30 candles for structural swing levels
         double tp = computeStructureBasedTP(candles, last, direction, price, sl, symbol);
@@ -3821,21 +3413,29 @@ public class Fxausd {
         return signals;
     }
 
-
     private static double getCurrentSpreadPips(String symbol) {
         String env = System.getenv("CURRENT_SPREAD_" + symbol.toUpperCase());
         if (env != null && !env.isEmpty()) {
-            try { return Double.parseDouble(env); } catch (Exception e) {}
+            try {
+                return Double.parseDouble(env);
+            } catch (Exception e) {
+            }
         }
-        
+
         // Dynamic Standard Spreads
-        switch(symbol.toUpperCase()) {
-            case "EURUSD": return 0.8;
-            case "GBPUSD": return 1.2;
-            case "USDJPY": return 1.0;
-            case "XAUUSD": return 15.0; // Points
-            case "GBPJPY": return 2.2;
-            default: return 1.5;
+        switch (symbol.toUpperCase()) {
+            case "EURUSD":
+                return 0.8;
+            case "GBPUSD":
+                return 1.2;
+            case "USDJPY":
+                return 1.0;
+            case "XAUUSD":
+                return 15.0; // Points
+            case "GBPJPY":
+                return 2.2;
+            default:
+                return 1.5;
         }
     }
 
@@ -3845,11 +3445,11 @@ public class Fxausd {
         if (index >= candles.size() - 1) {
             return slPips * 3.0; // fallback to 3:1 if insufficient candles
         }
-        
+
         int lookAhead = Math.min(30, candles.size() - index - 1);
         double minDistancePips = slPips * 1.5; // TP must be at least 1.5x SL away
         double maxSearchPips = slPips * 3.0; // default fallback
-        
+
         if ("BUY".equals(direction)) {
             // Find the nearest swing high above entry within next 30 bars
             double nearestSwingHigh = Double.MAX_VALUE;
@@ -3881,7 +3481,7 @@ public class Fxausd {
                 return nearestSwingLow;
             }
         }
-        
+
         // No valid structural level found; fall back to conservative 3:1 (not aggressive 5:1)
         System.out.printf("   [STRUCT] No swing level found; using conservative 3:1 TP\n");
         return slPips * 3.0;
@@ -3890,36 +3490,41 @@ public class Fxausd {
     private static TradeSignal createEliteSignal(String symbol, String direction, double entry, double slPips, double tpPips, double ml, double smc, double strength, String type, boolean bullish) {
         double slPrice = bullish ? (entry - convertPipsToPrice(symbol, slPips)) : (entry + convertPipsToPrice(symbol, slPips));
         double tpPrice = bullish ? (entry + convertPipsToPrice(symbol, tpPips)) : (entry - convertPipsToPrice(symbol, tpPips));
-        
-        String reason = String.format("ELITE %s: Confluence %.2f | RR 1:%.1f", type, smc, tpPips/slPips);
+
+        String reason = String.format("ELITE %s: Confluence %.2f | RR 1:%.1f", type, smc, tpPips / slPips);
         TradeSignal signal = new TradeSignal(symbol, direction, entry, slPrice, tpPrice, ml, smc, strength, reason, slPips, tpPips);
         signal.setupType = type;
-        signal.precisionScore = (int)strength;
+        signal.precisionScore = (int) strength;
         return signal;
     }
-
 
     private static boolean detectLiquiditySweep(java.util.List<Candle> candles, int index) {
         return detectLiquiditySweepDirection(candles, index) != 0;
     }
 
     private static int detectLiquiditySweepDirection(java.util.List<Candle> candles, int index) {
-        if (index < 30) return 0;
+        if (index < 30) {
+            return 0;
+        }
         double atr = calculateATR(candles, index, 14);
         double recentHigh = getRecentHigh(candles, index - 20, index - 1);
         double recentLow = getRecentLow(candles, index - 20, index - 1);
         Candle current = candles.get(index);
         double avgVolume = calculateAverageVolume(candles, index - 1, 20);
-        
+
         boolean volumeSpike = current.volume > avgVolume * 1.5;
-        
+
         if (current.low < recentLow && current.close > recentLow) {
             double sweepDistance = recentLow - current.low;
-            if (sweepDistance > atr * 0.25 && volumeSpike) return 1;
+            if (sweepDistance > atr * 0.25 && volumeSpike) {
+                return 1;
+            }
         }
         if (current.high > recentHigh && current.close < recentHigh) {
             double sweepDistance = current.high - recentHigh;
-            if (sweepDistance > atr * 0.25 && volumeSpike) return -1;
+            if (sweepDistance > atr * 0.25 && volumeSpike) {
+                return -1;
+            }
         }
         return 0;
     }
@@ -3969,7 +3574,9 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateSMCSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
-        if (isHighImpactNewsWindow()) return signals;
+        if (isHighImpactNewsWindow()) {
+            return signals;
+        }
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -4114,7 +3721,7 @@ public class Fxausd {
 
     private static double calculateSMCStopLossDistance(double atr, double minPriceDistance, double liquidity, double atrPct) {
         double volatilityFactor = 1.0 + Math.max(0.0, 0.18 - liquidity * 0.13);
-        double atrMultiplier = getDynamicAtrMultiplier   (atrPct);
+        double atrMultiplier = getDynamicAtrMultiplier(atrPct);
         return Math.max(atr * atrMultiplier, minPriceDistance) * volatilityFactor;
     }
 
@@ -4183,7 +3790,9 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateMeanReversionSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
-        if (isHighImpactNewsWindow()) return signals;
+        if (isHighImpactNewsWindow()) {
+            return signals;
+        }
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -4303,7 +3912,9 @@ public class Fxausd {
 
     private static java.util.List<TradeSignal> generateBreakoutSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
-        if (isHighImpactNewsWindow()) return signals;
+        if (isHighImpactNewsWindow()) {
+            return signals;
+        }
         if (candles == null || candles.size() < TREND_EMA_LONG + 5) {
             return signals;
         }
@@ -4617,7 +4228,9 @@ public class Fxausd {
     // ===============================
     public static double calculateRSI(java.util.List<Candle> data, int index, int period) {
 
-        if (index < period) return 50.0;
+        if (index < period) {
+            return 50.0;
+        }
 
         double gain = 0, loss = 0;
 
@@ -4986,18 +4599,26 @@ public class Fxausd {
         double emaSlope = Math.abs((ema20 - ema50) / Math.max(ema50, 1e-6));
 
         // --- UPGRADED REGIME DETECTION ---
-        if (atrPct > 0.0015) return "VOLATILE";
-        
-        if (isRangingMarket(data, index, period)) {
-             // Deep ranging analysis: Accumulation vs Distribution
-             double rsi = calculateRSI(data, index, 14);
-             if (rsi < 45) return "ACCUMULATION";
-             if (rsi > 55) return "DISTRIBUTION";
-             return "RANGING";
+        if (atrPct > 0.0015) {
+            return "VOLATILE";
         }
-        
-        if (emaSlope > 0.0015) return "TRENDING";
-        
+
+        if (isRangingMarket(data, index, period)) {
+            // Deep ranging analysis: Accumulation vs Distribution
+            double rsi = calculateRSI(data, index, 14);
+            if (rsi < 45) {
+                return "ACCUMULATION";
+            }
+            if (rsi > 55) {
+                return "DISTRIBUTION";
+            }
+            return "RANGING";
+        }
+
+        if (emaSlope > 0.0015) {
+            return "TRENDING";
+        }
+
         return "RANGING";
     }
 
@@ -5276,8 +4897,8 @@ public class Fxausd {
             double atr = convertPipsToPrice(signal.symbol, signal.riskAmount);
             double currentPrice = candle.close;
             double atrPct = currentPrice > 0 ? atr / currentPrice : 0.001;
-            int  maxCandles = Math.max(8, Math.min(50, (int)(20.0 / Math.max(atrPct, 0.0001))));
-            
+            int maxCandles = Math.max(8, Math.min(50, (int) (20.0 / Math.max(atrPct, 0.0001))));
+
             if (candlesInTrade > maxCandles) {
                 close(candle.close, "Timeout Exit (ATR-scaled: " + maxCandles + " bars)");
                 return;
@@ -5635,7 +5256,7 @@ public class Fxausd {
                         + "setup_type VARCHAR(64) PRIMARY KEY, "
                         + "wins INTEGER DEFAULT 0, "
                         + "losses INTEGER DEFAULT 0)");
-                
+
                 // 8. Setup pair_performance table
                 stmt.execute("CREATE TABLE IF NOT EXISTS pair_performance ("
                         + "symbol VARCHAR(64) PRIMARY KEY, "
@@ -5647,16 +5268,20 @@ public class Fxausd {
         }
 
         public double getHistoricalWinRate(String setupType) {
-            if (!enabled) return 0.75;
-            
+            if (!enabled) {
+                return 0.75;
+            }
+
             // Clear cache every 10 minutes
             if (System.currentTimeMillis() - lastCacheClear > 600000) {
                 winRateCache.clear();
                 pairPerfCache.clear();
                 lastCacheClear = System.currentTimeMillis();
             }
-            
-            if (winRateCache.containsKey(setupType)) return winRateCache.get(setupType);
+
+            if (winRateCache.containsKey(setupType)) {
+                return winRateCache.get(setupType);
+            }
 
             String sql = "SELECT wins, losses FROM trade_stats WHERE setup_type = ?";
             try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -5669,16 +5294,20 @@ public class Fxausd {
                     winRateCache.put(setupType, rate);
                     return rate;
                 }
-            } catch (Exception e) { 
+            } catch (Exception e) {
                 System.out.println("⚠️ DB WinRate fetch error: " + e.getMessage());
             }
             return 0.75;
         }
 
         public double getPairPerformanceMult(String symbol) {
-            if (!enabled) return 1.0;
-            
-            if (pairPerfCache.containsKey(symbol)) return pairPerfCache.get(symbol);
+            if (!enabled) {
+                return 1.0;
+            }
+
+            if (pairPerfCache.containsKey(symbol)) {
+                return pairPerfCache.get(symbol);
+            }
 
             String sql = "SELECT wins, losses FROM pair_performance WHERE symbol = ?";
             try (Connection conn = createConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -5692,7 +5321,7 @@ public class Fxausd {
                     pairPerfCache.put(symbol, mult);
                     return mult;
                 }
-            } catch (Exception e) { 
+            } catch (Exception e) {
                 System.out.println("⚠️ DB PairPerf fetch error: " + e.getMessage());
             }
             return 1.0;
