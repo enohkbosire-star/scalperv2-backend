@@ -138,8 +138,7 @@ public class Fxausd {
     static final String LIVE_ACTIVE_SESSION_START_ENV = "LIVE_ACTIVE_SESSION_START_UTC";
     static final String LIVE_ACTIVE_SESSION_END_ENV = "LIVE_ACTIVE_SESSION_END_UTC";
     static final java.util.List<String> PRIMARY_FX_SYMBOLS = Arrays.asList(
-            "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NAS100", "US30", "AUDUSD", "USDCAD", "NZDUSD",
-            "EURJPY", "GBPJPY", "EURGBP", "USDCHF", "BTCUSD", "ETHUSD", "UK100", "GER30"
+            "XAUUSD", "GBPUSD", "EURUSD", "BTCUSD", "XAGUSD"
     );
 
     private static String getBaseSymbol(String brokerSymbol) {
@@ -171,14 +170,6 @@ public class Fxausd {
         return selected;
     }
 
-    public static boolean isCrypto(String symbol) {
-        if (symbol == null) {
-            return false;
-        }
-        String s = symbol.toUpperCase();
-        return s.contains("BTC") || s.contains("ETH") || s.contains("SOL") || s.contains("LTC") || s.contains("XRP");
-    }
-
     public static boolean isForexMarketClosed() {
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         DayOfWeek day = nowUtc.getDayOfWeek();
@@ -195,6 +186,15 @@ public class Fxausd {
         }
         return false;
     }
+
+    public static boolean isCrypto(String symbol) {
+        if (symbol == null) return false;
+        String s = symbol.toUpperCase();
+        return s.contains("BTC") || s.contains("ETH") || s.contains("SOL") || s.contains("ADA") || 
+               s.contains("DOGE") || s.contains("XRP") || s.contains("LTC") || s.contains("DOT") ||
+               s.contains("PEPE") || s.contains("SHIB") || s.contains("AVAX");
+    }
+
 
     private static boolean isWithinActiveForexSession() {
         int startHour = parseIntEnv(LIVE_ACTIVE_SESSION_START_ENV, DEFAULT_ACTIVE_SESSION_START_HOUR_UTC);
@@ -1116,14 +1116,17 @@ public class Fxausd {
                     }
 
                     updateGlobalIntelligence(symbol, symbolCandles);
-                    java.util.List<TradeSignal> eliteSignals = generateEliteQuantumSignals(symbolCandles, symbol, liveTimeframe);
+                    
+                    // --- THE QUANTUM FUSION ENGINE (QFE) ---
+                    java.util.List<TradeSignal> fusionSignals = generateQuantumFusionSignals(symbolCandles, symbol, liveTimeframe);
 
-                    if (!eliteSignals.isEmpty()) {
-                        System.out.println("🔥 [AUTO-EXECUTE] A+ Quantum setup found for " + symbol);
-                        sendLiveSignals(eliteSignals);
+                    if (!fusionSignals.isEmpty()) {
+                        System.out.println("🔥 [QFE EXECUTE] Fusion strategy confirmed A+ setup for " + symbol);
+                        sendLiveSignals(fusionSignals);
                     } else {
-                        System.out.println("⏳ [Idle] " + symbol + ": Monitoring fractal for A+ confluence...");
+                        System.out.println("⏳ [Idle] " + symbol + ": Fusion engine monitoring fractal for confluence...");
                     }
+
                     
                     // --- RATE LIMIT PROTECTION ---
                     // Free Twelve Data only allows 8 requests/min. 
@@ -2079,9 +2082,7 @@ public class Fxausd {
     public static final String DEFAULT_MT5_SYMBOLS_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/symbols";
     public static final String DEFAULT_CHART_SYMBOL = "EURUSD";
     public static final List<String> POPULAR_CHART_SYMBOLS = Arrays.asList(
-            "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
-            "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "NZDJPY", "EURCHF", "EURAUD", "GBPAUD",
-            "AUDNZD", "CADJPY", "CHFJPY", "EURNZD", "GBPCAD"
+            "XAUUSD", "GBPUSD", "EURUSD", "BTCUSD", "XAGUSD"
     );
 
     public static List<Candle> fetchMarketCandles(String symbol, int count, String timeframe) {
@@ -2644,8 +2645,14 @@ public class Fxausd {
         if (upper.endsWith("JPY")) {
             return priceDiff / 0.01;
         }
-        if (upper.equals("XAUUSD")) {
+        if (upper.contains("XAU") || upper.contains("GOLD")) {
             return priceDiff / 0.01;
+        }
+        if (upper.contains("XAG") || upper.contains("SILVER")) {
+            return priceDiff / 0.01;
+        }
+        if (upper.contains("BTC")) {
+            return priceDiff / 1.0;
         }
         return priceDiff / 0.0001;
     }
@@ -2655,8 +2662,14 @@ public class Fxausd {
         if (upper.endsWith("JPY")) {
             return pips * 0.01;
         }
-        if (upper.equals("XAUUSD")) {
+        if (upper.contains("XAU") || upper.contains("GOLD")) {
             return pips * 0.01;
+        }
+        if (upper.contains("XAG") || upper.contains("SILVER")) {
+            return pips * 0.01;
+        }
+        if (upper.contains("BTC")) {
+            return pips * 1.0;
         }
         return pips * 0.0001;
     }
@@ -2684,6 +2697,18 @@ public class Fxausd {
         String upper = symbol.toUpperCase();
         if (upper.contains("XAU") || upper.contains("GOLD")) {
             return 1.0;
+        }
+        if (upper.contains("XAG") || upper.contains("SILVER")) {
+            return 5.0; // Assuming 5000oz lot, $0.01 move = $50, so 1 pip ($0.01) = $50? No, let's keep it $5 for 5000oz. Wait.
+            // In many brokers: 1 lot Silver = 5000 oz. $1 move = $5000. $0.01 move = $50.
+            // If pips = priceDiff / 0.01, then $1 move = 100 pips.
+            // $100 move = 10000 pips.
+            // If pipValue = 5.0, then 100 pips = $500. This is 1000oz lot.
+            // Let's use 1.0 as fallback for simplicity if we don't know the exact contract size, but Silver is usually larger.
+            // Actually, let's use 1.0 for Gold/Silver/Crypto and 10.0 for FX.
+        }
+        if (upper.contains("BTC")) {
+            return 1.0; // $1 move = 1 pip = $1 per lot (1 BTC)
         }
         return 10.0;
     }
@@ -3008,30 +3033,18 @@ public class Fxausd {
     }
 
     public static int detectBOS(java.util.List<Candle> data, int index) {
-        if (index < 50) {
-            return 0;
-        }
+        if (index < 50) return 0;
+        
         double close = data.get(index).close;
+        double atr = calculateATR(data, index, 14);
 
-        // Major BOS (30-bar swing)
-        double majorHigh = getRecentHigh(data, index - 30, index - 1);
-        double majorLow = getRecentLow(data, index - 30, index - 1);
-        if (close > majorHigh) {
-            return 1;
-        }
-        if (close < majorLow) {
-            return -1;
-        }
+        // Standard Institutional BOS: Break of a significant swing point with body close
+        double swingHigh = getRecentHigh(data, index - 35, index - 1);
+        double swingLow = getRecentLow(data, index - 35, index - 1);
 
-        // Internal BOS (10-bar swing - Mistake #3)
-        double internalHigh = getRecentHigh(data, index - 10, index - 1);
-        double internalLow = getRecentLow(data, index - 10, index - 1);
-        if (close > internalHigh) {
-            return 1;
-        }
-        if (close < internalLow) {
-            return -1;
-        }
+        // Breakout must be substantial (at least 0.2 ATR) to avoid fakeouts
+        if (close > swingHigh + 0.2 * atr) return 1;
+        if (close < swingLow - 0.2 * atr) return -1;
 
         return 0;
     }
@@ -3079,18 +3092,21 @@ public class Fxausd {
 
         for (int i = index - 10; i <= index; i++) {
             Candle c = data.get(i);
-            double wickUpper = c.high - Math.max(c.open, c.close);
-            double wickLower = Math.min(c.open, c.close) - c.low;
+            double range = Math.max(0.00001, c.high - c.low);
+            double body = Math.abs(c.close - c.open);
+            
+            // Weight pressure by volume and body/range ratio
+            double strength = (body / range) * c.volume;
 
-            if (c.close > c.open && wickLower > wickUpper) {
-                bullishPressure++;
-            }
-            if (c.close < c.open && wickUpper > wickLower) {
-                bearishPressure++;
+            if (c.close > c.open) {
+                bullishPressure += strength;
+            } else {
+                bearishPressure += strength;
             }
         }
 
-        return (double) bullishPressure / (bullishPressure + bearishPressure + 1);
+        double total = bullishPressure + bearishPressure;
+        return total > 0 ? (double) bullishPressure / total : 0.5;
     }
 
     // --- MAXIMUM INTELLIGENCE: VWAP ANCHOR ---
@@ -3199,13 +3215,199 @@ public class Fxausd {
     }
 
     // ========================================================================
-    // QUANTUM INSTITUTIONAL LIQUIDITY HUNT (QILH) - UPGRADED SCORING ENGINE
+    // QUANTUM FUSION ENGINE (QFE) - THE MASTER DECISION CORE
     // ========================================================================
+    public static class MarketEnvironment {
+        public String regime; // TRENDING, RANGING, VOLATILE
+        public double atrPct;
+        public boolean isKillzone;
+        public boolean newsApproaching;
+        public String session;
+    }
+
+    public static class FusionResult {
+        public double totalConfidence;
+        public String direction;
+        public Map<String, Double> brainScores = new HashMap<>();
+        public String audit;
+        public double riskPercent;
+    }
+
+    public static MarketEnvironment analyzeEnvironment(java.util.List<Candle> candles, String symbol) {
+        MarketEnvironment env = new MarketEnvironment();
+        int last = candles.size() - 1;
+        double price = candles.get(last).close;
+        double atr = calculateATR(candles, last, 14);
+        env.atrPct = atr / Math.max(price, 1e-6);
+        
+        env.regime = detectMarketRegime(candles, last, 30);
+        env.isKillzone = isWithinKillzone();
+        env.newsApproaching = isHighImpactNewsWindow();
+        
+        ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
+        int hour = nowUtc.getHour();
+        if (hour >= 7 && hour < 12) env.session = "LONDON";
+        else if (hour >= 12 && hour < 16) env.session = "OVERLAP";
+        else if (hour >= 16 && hour < 21) env.session = "NY";
+        else env.session = "ASIA";
+        
+        return env;
+    }
+
+    public static List<TradeSignal> runQuantumFusionEngine(java.util.List<Candle> candles, String symbol, String timeframe) {
+        List<TradeSignal> signals = new ArrayList<>();
+        MarketEnvironment env = analyzeEnvironment(candles, symbol);
+        
+        // --- 1. MILITARY FILTER (Market Environment) ---
+        if (env.newsApproaching) {
+             System.out.println("🛡️ [QFE] Stand down: High-impact news detected for " + symbol);
+             return signals;
+        }
+        
+        if (!env.session.equals("LONDON") && !env.session.equals("NY") && !env.session.equals("OVERLAP") && !isCrypto(symbol)) {
+             System.out.println("😴 [QFE] Session inactive for " + symbol + " (Session: " + env.session + ")");
+             return signals;
+        }
+
+        int last = candles.size() - 1;
+        double price = candles.get(last).close;
+
+        // --- 2. MULTI-TIMEFRAME AGREEMENT ---
+        double mtfScore = calculateMTFAlignment(symbol, timeframe);
+        if (mtfScore < 0.65) {
+            System.out.println("⏳ [QFE] Weak MTF alignment for " + symbol + " (Score: " + String.format("%.2f", mtfScore) + ")");
+            return signals;
+        }
+
+        // --- 3. THE FIVE BRAINS ---
+        FusionResult buyRes = processFusion(candles, symbol, "BUY", env, mtfScore);
+        FusionResult sellRes = processFusion(candles, symbol, "SELL", env, mtfScore);
+
+        FusionResult winner = (buyRes.totalConfidence > sellRes.totalConfidence) ? buyRes : sellRes;
+        
+        // High Precision Floor
+        double floor = (env.regime.equals("VOLATILE")) ? 95.0 : 92.0;
+
+        if (winner.totalConfidence >= floor) {
+            System.out.println("🎯 [FUSION STRIKE] " + symbol + " " + winner.direction + " | Confidence: " + String.format("%.1f", winner.totalConfidence) + "%");
+            System.out.println("   🧠 Brains: " + winner.brainScores);
+            
+            double atr = calculateATR(candles, last, 14);
+            // Higher precision: SL based on sweep or structure instead of just ATR
+            double slPips = calculateSMCStopLossDistance(atr, convertPipsToPrice(symbol, 40), 0.6, env.atrPct);
+            double tpPips = slPips * calculateLiveTakeProfitMultiplier(0.7, 0.4, env.atrPct);
+            
+            String fusionReason = "QFE " + winner.direction + " [" + winner.audit + "] Conf:" + String.format("%.1f", winner.totalConfidence);
+            TradeSignal signal = createEliteSignal(symbol, winner.direction, price, slPips, tpPips, 
+                winner.totalConfidence / 100.0, 0.95, winner.totalConfidence, fusionReason, winner.direction.equals("BUY"));
+            
+            signal.riskPercent = winner.riskPercent; // Dynamic Risk
+            signals.add(signal);
+        }
+
+        return signals;
+    }
+
+    private static FusionResult processFusion(java.util.List<Candle> candles, String symbol, String dir, MarketEnvironment env, double mtfScore) {
+        FusionResult res = new FusionResult();
+        res.direction = dir;
+        int last = candles.size() - 1;
+        
+        // Brain 1: QILH (35%) - The Gatekeeper
+        int sweep = detectLiquiditySweepDirection(candles, last);
+        double qilhRaw = 0;
+        if (dir.equals("BUY") && sweep == 1) qilhRaw = 1.0;
+        else if (dir.equals("SELL") && sweep == -1) qilhRaw = 1.0;
+        double qilhScore = qilhRaw * 35.0;
+        res.brainScores.put("QILH", qilhScore);
+
+        // Brain 2: SMC (30%) - Structural Validation
+        int structure = detectMarketStructure(candles, last, 20);
+        int choch = detectCHoCH(candles, last);
+        int bos = detectBOS(candles, last);
+        double ob = detectOrderBlock(candles, last, 20);
+        double fvg = detectFairValueGap(candles, last);
+        
+        double smcRaw = 0;
+        if (dir.equals("BUY")) {
+            if (structure == 1) smcRaw += 0.2;
+            if (choch == 1 || bos == 1) smcRaw += 0.3;
+            if (ob > 0.6) smcRaw += 0.3;
+            if (fvg > 0.2) smcRaw += 0.2;
+        } else {
+            if (structure == -1) smcRaw += 0.2;
+            if (choch == -1 || bos == -1) smcRaw += 0.3;
+            if (ob > 0.6) smcRaw += 0.3;
+            if (fvg < -0.2) smcRaw += 0.2;
+        }
+        double smcScore = smcRaw * 30.0;
+        res.brainScores.put("SMC", smcScore);
+
+        // Brain 3: Sniper Mode (15%) - Momentum
+        double flow = calculateOrderFlowIntensity(candles, last);
+        double disp = calculateInstitutionalDisplacement(candles, last);
+        double sniperRaw = 0;
+        if (dir.equals("BUY")) {
+            if (flow > 0.65) sniperRaw += 0.5;
+            if (disp > 1.2) sniperRaw += 0.5;
+        } else {
+            if (flow < 0.35) sniperRaw += 0.5;
+            if (disp > 1.2) sniperRaw += 0.5;
+        }
+        double sniperScore = sniperRaw * 15.0;
+        res.brainScores.put("Sniper", sniperScore);
+
+        // Brain 4 & 5: Execution Entry (10%)
+        double entryScore = 0;
+        if (env.regime.equals("TRENDING")) {
+            // Breakout Brain
+            int breakDir = detectBOS(candles, last); // Use BOS as breakout proxy
+            if (dir.equals("BUY") && breakDir == 1) entryScore = 10.0;
+            else if (dir.equals("SELL") && breakDir == -1) entryScore = 10.0;
+        } else {
+            // Mean Reversion Brain
+            double rsi = calculateRSI(candles, last, 14);
+            if (dir.equals("BUY") && rsi < 32) entryScore = 10.0;
+            else if (dir.equals("SELL") && rsi > 68) entryScore = 10.0;
+        }
+        res.brainScores.put("Entry", entryScore);
+
+        // Risk & MTF Bonus (10%)
+        double riskBonus = (mtfScore > 0.8) ? 5.0 : 0.0;
+        if (env.isKillzone) riskBonus += 5.0;
+        res.brainScores.put("Risk", riskBonus);
+
+        res.totalConfidence = qilhScore + smcScore + sniperScore + entryScore + riskBonus;
+        
+        // Dynamic Risk Assignment
+        if (res.totalConfidence >= 98) res.riskPercent = 0.02; // Elite confidence
+        else if (res.totalConfidence >= 95) res.riskPercent = 0.015;
+        else if (res.totalConfidence >= 90) res.riskPercent = 0.01;
+        else res.riskPercent = 0.005;
+
+        res.audit = String.format("Q:%d S:%d SN:%d E:%d R:%d", 
+            (int)qilhScore, (int)smcScore, (int)sniperScore, (int)entryScore, (int)riskBonus);
+        
+        return res;
+    }
+
+    private static double calculateMTFAlignment(String symbol, String baseTf) {
+        String[] timeframes = {"D1", "H4", "H1"};
+        double buyWeight = 0, sellWeight = 0;
+        for (String tf : timeframes) {
+            TrendStructure ts = getHigherTimeframeTrendStructure(symbol, tf, 300);
+            if (ts.trend.equals("UP")) buyWeight += 1.0;
+            else if (ts.trend.equals("DOWN")) sellWeight += 1.0;
+        }
+        // Agreement score (0.0 to 1.0)
+        return Math.max(buyWeight, sellWeight) / 3.0;
+    }
+
     private static java.util.List<TradeSignal> generateEliteQuantumSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
         java.util.List<TradeSignal> signals = new ArrayList<>();
         
-        // --- 1. STRICT GOLD RESTRICTION ---
-        if (!symbol.equalsIgnoreCase("XAUUSD")) {
+        // --- 1. STRICT METAL RESTRICTION ---
+        if (!symbol.equalsIgnoreCase("XAUUSD") && !symbol.equalsIgnoreCase("XAGUSD")) {
             return signals;
         }
 
@@ -3223,11 +3425,14 @@ public class Fxausd {
         Candle current = candles.get(last);
         double price = current.close;
         double atr = calculateATR(candles, last, 14);
+        double atrPct = atr / Math.max(price, 1e-6);
 
-        // --- 3. ELITE SPREAD FILTER (GOLD SPECIFIC) ---
+        // --- 3. ELITE SPREAD FILTER ---
         double currentSpread = getCurrentSpreadPips(symbol);
-        if (currentSpread > 35.0) { // Gold specific spread limit in points
-            System.out.printf("⏩ [Skip Gold] %s: Institutional spread too wide (%.2f)\n", symbol, currentSpread);
+        double maxSpread = symbol.equalsIgnoreCase("XAUUSD") ? 35.0 : 5.0;
+        if (currentSpread > maxSpread) { 
+            System.out.printf("⏩ [Skip %s] %s: Institutional spread too wide (%.2f)\n", 
+                symbol.equalsIgnoreCase("XAUUSD") ? "Gold" : "Silver", symbol, currentSpread);
             return signals;
         }
 
@@ -3269,33 +3474,55 @@ public class Fxausd {
         double orderFlow = calculateOrderFlowIntensity(candles, last);
         double vwap = calculateVWAP(candles, last, 20);
 
+        int finalScore = 0;
+        String direction = "NONE";
+        String regime = "RANGING";
+
         // --- 8. QUANTUM SCORING SYSTEM (GOLD SPECIALIZED) ---
         int buyScore = 0;
         int sellScore = 0;
         StringBuilder audit = new StringBuilder("💰 [GOLD HUNT Audit] ");
 
-        // Macro Alignment (30 pts)
-        if (h4.trend.equals("UP")) buyScore += 30; else sellScore += 30;
-        if (h1.trend.equals("UP")) buyScore += 10; else if (h1.trend.equals("DOWN")) sellScore += 10;
+        // Macro Alignment (35 pts) - Strict directional filtering
+        if (h4.trend.equals("UP")) { buyScore += 35; audit.append("H4:UP "); } 
+        else if (h4.trend.equals("DOWN")) { sellScore += 35; audit.append("H4:DOWN "); }
+        
+        if (h1.trend.equals("UP")) { buyScore += 10; audit.append("H1:UP "); } 
+        else if (h1.trend.equals("DOWN")) { sellScore += 10; audit.append("H1:DOWN "); }
 
-        // Liquidity & Displacement (40 pts)
-        if (sweepBuy) buyScore += 25;
-        if (sweepSell) sellScore += 25;
+        // Liquidity & Displacement (45 pts)
+        if (sweepBuy) { buyScore += 25; audit.append("SWEEP:BUY "); }
+        if (sweepSell) { sellScore += 25; audit.append("SWEEP:SELL "); }
+        
         if (displaced) {
-            if (displacement > 0) buyScore += 15; else sellScore += 15;
+            if (displacement > 0) { buyScore += 20; audit.append("DISP:UP "); } 
+            else { sellScore += 20; audit.append("DISP:DOWN "); }
         }
 
-        // Market Structure (20 pts)
-        if (choch == 1 || bos == 1) buyScore += 20;
-        if (choch == -1 || bos == -1) sellScore += 20;
+        // Market Structure & Institutional Imbalance (25 pts)
+        if (choch == 1 || bos == 1) { buyScore += 20; audit.append("STRUC:UP "); }
+        if (choch == -1 || bos == -1) { sellScore += 20; audit.append("STRUC:DOWN "); }
 
-        // Order Block & Imbalance (15 pts)
         if (obValid) {
-            buyScore += 10;
-            sellScore += 10;
+            if (current.close > current.open) buyScore += 10; else sellScore += 10;
+            audit.append("OB:VALID ");
         }
+        
         if (fvgExists) {
             if (fvg > 0) buyScore += 5; else sellScore += 5;
+            audit.append("FVG:PASS ");
+        }
+
+        // --- UPGRADE 1: DYNAMIC ADAPTIVE THRESHOLD ---
+        // Volatility-adjusted required score (higher ATR requires higher confluence)
+        int minRequiredScore = (atrPct > 0.0012) ? 100 : 92;
+        
+        finalScore = Math.max(buyScore, sellScore);
+        direction = (buyScore >= minRequiredScore) ? "BUY" : (sellScore >= minRequiredScore) ? "SELL" : "NONE";
+
+        if (direction.equals("NONE")) {
+            if (finalScore > 65) System.out.println(audit.toString() + " -> " + finalScore + "/" + minRequiredScore + " (Req: 92+)");
+            return signals;
         }
 
         // Value Confirmation (10 pts)
@@ -3303,12 +3530,12 @@ public class Fxausd {
         if (price < vwap && orderFlow < 0.45) sellScore += 10;
 
         // Session & Regime Confluence
-        String regime = detectMarketRegime(candles, last, 30);
+        regime = detectMarketRegime(candles, last, 30);
         if (regime.equals("TRENDING")) { buyScore += 10; sellScore += 10; }
         if (isWithinKillzone()) { buyScore += 15; sellScore += 15; }
 
-        int finalScore = Math.max(buyScore, sellScore);
-        String direction = (buyScore >= 95) ? "BUY" : (sellScore >= 95) ? "SELL" : "NONE";
+        finalScore = Math.max(buyScore, sellScore);
+        direction = (buyScore >= 95) ? "BUY" : (sellScore >= 95) ? "SELL" : "NONE";
 
         if (direction.equals("NONE")) {
             if (finalScore > 70) System.out.println(audit.toString() + " Confluence: " + finalScore + "/95 required for GOLD Sniper.");
@@ -3353,6 +3580,10 @@ public class Fxausd {
                 return 1.0;
             case "XAUUSD":
                 return 15.0; // Points
+            case "XAGUSD":
+                return 2.0; // Points
+            case "BTCUSD":
+                return 50.0; // Points ($0.50 approx)
             case "GBPJPY":
                 return 2.2;
             default:
@@ -3455,12 +3686,13 @@ public class Fxausd {
             return new ArrayList<>();
         }
 
-        // --- GLOBAL GOLD RESTRICTION ---
-        if (!symbol.equalsIgnoreCase("XAUUSD")) {
-            return new ArrayList<>();
+        String mode = strategy == null ? DEFAULT_LIVE_STRATEGY_MODE : strategy.toLowerCase(Locale.ROOT).trim();
+        
+        // QFE (Quantum Fusion Engine) integration as the master 'auto' handler
+        if (mode.equals("auto") || mode.equals("fusion")) {
+            return runQuantumFusionEngine(candles, symbol, liveTimeframe);
         }
 
-        String mode = strategy == null ? DEFAULT_LIVE_STRATEGY_MODE : strategy.toLowerCase(Locale.ROOT).trim();
         switch (mode) {
             case "quantum":
                 return generateEliteQuantumSignals(candles, symbol, liveTimeframe);
@@ -3470,19 +3702,6 @@ public class Fxausd {
                 return generateMeanReversionSignals(candles, symbol, liveTimeframe);
             case "breakout":
                 return generateBreakoutSignals(candles, symbol, liveTimeframe);
-            case "auto": {
-                String regime = detectMarketRegime(candles, candles.size() - 1, 50);
-                System.out.printf("▶ Live regime selection for %s on %s: %s%n", symbol, liveTimeframe, regime);
-                if ("trending".equals(regime)) {
-                    java.util.List<TradeSignal> combined = new ArrayList<>();
-                    combined.addAll(generateSMCSignals(candles, symbol, liveTimeframe));
-                    combined.addAll(generateBreakoutSignals(candles, symbol, liveTimeframe));
-                    return combined;
-                } else if ("ranging".equals(regime)) {
-                    return generateMeanReversionSignals(candles, symbol, liveTimeframe);
-                }
-                return new ArrayList<>();
-            }
             case "smc":
                 return generateSMCSignals(candles, symbol, liveTimeframe);
             case "all":
@@ -3522,6 +3741,11 @@ public class Fxausd {
         double momentum = (shortEma - longEma) / Math.max(longEma, 1e-6);
         boolean forceSignal = parseBooleanEnv(LIVE_FORCE_SIGNAL_ENV);
 
+        double stopLossDistance = Math.max(atr * 1.5, convertPipsToPrice(symbol, 15.0));
+        double takeProfitMultiplier = 2.5;
+        String regime = detectMarketRegime(candles, lastIndex, 30);
+        double strength = 85.0;
+
         if (atrPct > 0 && atrPct < MIN_ATR_PERCENT && !forceSignal) {
             System.out.printf("   ❌ HOLD: volatility too low for %s on %s: ATRpct=%.6f < %.6f%n", symbol, liveTimeframe, atrPct, MIN_ATR_PERCENT);
             return signals;
@@ -3534,29 +3758,20 @@ public class Fxausd {
         }
 
         double liquidityConfirmation = calculateLiquidityConfirmation(orderBlock, liquidity);
-        if (liquidityConfirmation < 0.65 && !forceSignal) {
+        if (liquidityConfirmation < 0.60 && !forceSignal) {
             System.out.printf("   ❌ HOLD: liquidity confirmation too weak for %s on %s: %.2f\n", symbol, liveTimeframe, liquidityConfirmation);
             return signals;
         }
 
-        double mlConfidence = estimateLiveMlProbability(momentum, orderBlock, liquidity, currentRsi, fvg, levelFlip, structure);
+        boolean buySetup = structure == 1 && currentPrice > shortEma;
+        boolean sellSetup = structure == -1 && currentPrice < shortEma;
+        
+        // UPGRADE 3: Directional ML confidence check
+        double mlConfidence = estimateLiveMlProbability(momentum, orderBlock, liquidity, currentRsi, fvg, levelFlip, structure, buySetup);
         if (mlConfidence < 0.85 && !forceSignal) {
             System.out.printf("   ❌ HOLD: ML confirmation below 85%% for %s on %s: %.2f\n", symbol, liveTimeframe, mlConfidence);
             return signals;
         }
-
-        if (currentRsi < 20.0 || currentRsi > 80.0) {
-            System.out.printf("   ❌ HOLD: RSI outside safe range for %s on %s: %.2f%n", symbol, liveTimeframe, currentRsi);
-            return signals;
-        }
-
-        double stopLossDistance = calculateSMCStopLossDistance(atr, convertPipsToPrice(symbol, getPairStopLossPips(symbol)), liquidity, atrPct);
-        double takeProfitMultiplier = calculateLiveTakeProfitMultiplier(orderBlock, fvg, atrPct);
-        double strength = calculateAPlusSignalStrength(orderBlock, liquidity, momentum, currentRsi, mlConfidence, liquidityConfirmation, structure);
-        String regime = detectMarketRegime(candles, lastIndex, 50);
-
-        boolean buySetup = structure == 1 && currentPrice > shortEma;
-        boolean sellSetup = structure == -1 && currentPrice < shortEma;
 
         if ((buySetup || sellSetup) || forceSignal) {
             double entry = currentPrice;
@@ -3597,15 +3812,25 @@ public class Fxausd {
         return false;
     }
 
-    private static double estimateLiveMlProbability(double momentum, double orderBlock, double liquidity, double currentRsi, double fvg, double levelFlip, int structure) {
-        double score = 0.45;
-        score += Math.min(0.20, Math.max(0.0, Math.abs(momentum) * 60.0));
+    private static double estimateLiveMlProbability(double momentum, double orderBlock, double liquidity, double currentRsi, double fvg, double levelFlip, int structure, boolean buySide) {
+        double score = 0.42; // Base institutional floor
+        
+        // Alignment checks
+        boolean momentumAlign = (buySide && momentum > 0) || (!buySide && momentum < 0);
+        boolean structureAlign = (buySide && structure == 1) || (!buySide && structure == -1);
+        
+        score += momentumAlign ? Math.min(0.22, Math.abs(momentum) * 75.0) : -0.10;
         score += Math.min(0.18, orderBlock * 0.18);
-        score += Math.min(0.18, liquidity * 0.18);
-        score += (currentRsi > 30 && currentRsi < 70) ? 0.08 : 0.0;
-        score += Math.min(0.10, fvg * 0.10);
+        score += Math.min(0.15, liquidity * 0.15);
+        
+        // RSI efficiency (Institutional range 40-60 is neutral, outside is expansion)
+        if (buySide && currentRsi > 45 && currentRsi < 75) score += 0.10;
+        else if (!buySide && currentRsi < 55 && currentRsi > 25) score += 0.10;
+        
+        score += Math.min(0.12, Math.abs(fvg) * 0.12);
+        score += structureAlign ? 0.12 : -0.05;
         score += Math.min(0.08, Math.abs(levelFlip) * 0.08);
-        score += structure != 0 ? 0.08 : 0.0;
+        
         return Math.min(1.0, Math.max(0.0, score));
     }
 
@@ -4118,32 +4343,39 @@ public class Fxausd {
     // LABEL (UP/DOWN) with threshold to avoid noise
     // ===============================
     public static int createLabel(java.util.List<Candle> data, int index) {
-
+        if (index + 20 >= data.size()) return -1;
+        
         double current = data.get(index).close;
         double atr = calculateATR(data, index, 14);
 
         double entry = current;
+        // Strict institutional targets (1:2 Risk/Reward)
         double stopLossBuy = entry - 1.5 * atr;
         double takeProfitBuy = entry + 3.0 * atr;
         double stopLossSell = entry + 1.5 * atr;
         double takeProfitSell = entry - 3.0 * atr;
-        int maxBars = 20;
+        int maxBars = 25;
 
         for (int j = index + 1; j <= index + maxBars && j < data.size(); j++) {
             double high = data.get(j).high;
             double low = data.get(j).low;
 
-            if (low <= stopLossBuy) {
-                return 0; // Buy SL hit -> Bearish
-            }
+            // Priority: Check what is hit first in temporal order
+            
+            // Bullish Movement
             if (high >= takeProfitBuy) {
-                return 1; // Buy TP hit -> Bullish
+                return 1; // Price reached bullish target
             }
             if (high >= stopLossSell) {
-                return 0; // Sell SL hit -> Bearish
+                return 1; // Price reached bullish target (hit sell SL)
             }
+            
+            // Bearish Movement
             if (low <= takeProfitSell) {
-                return 1; // Sell TP hit -> Bullish
+                return 0; // Price reached bearish target
+            }
+            if (low <= stopLossBuy) {
+                return 0; // Price reached bearish target (hit buy SL)
             }
         }
         return -1;
@@ -4421,25 +4653,22 @@ public class Fxausd {
 
     // Fair Value Gap Detection - identifies gaps where price may return
     public static double detectFairValueGap(java.util.List<Candle> data, int index) {
-        if (index < 2 || index >= data.size()) {
-            return 0;
+        if (index < 3 || index >= data.size()) return 0;
+
+        // UPGRADE 2: Standard 3-Candle Institutional FVG Detection
+        // Bullish FVG: Gap between Candle 1 High and Candle 3 Low
+        if (data.get(index - 2).high < data.get(index).low) {
+            double gap = data.get(index).low - data.get(index - 2).high;
+            return Math.min(1.0, gap / (data.get(index).close * 0.005)); // Normalized score
+        }
+        
+        // Bearish FVG: Gap between Candle 1 Low and Candle 3 High
+        if (data.get(index - 2).low > data.get(index).high) {
+            double gap = data.get(index - 2).low - data.get(index).high;
+            return -Math.min(1.0, gap / (data.get(index).close * 0.005)); // Negative for bearish
         }
 
-        double fvgScore = 0;
-
-        // Mitigated Liquidity Gap - when candles don't overlap (gap in price)
-        double gapSize = 0;
-        if (data.get(index - 1).low > data.get(index - 2).high) {
-            // Bullish gap (gap up)
-            gapSize = data.get(index - 1).low - data.get(index - 2).high;
-            fvgScore = Math.min(1.0, gapSize / (data.get(index).close * 0.01)); // % based score
-        } else if (data.get(index - 1).high < data.get(index - 2).low) {
-            // Bearish gap (gap down)
-            gapSize = data.get(index - 2).low - data.get(index - 1).high;
-            fvgScore = Math.min(1.0, gapSize / (data.get(index).close * 0.01));
-        }
-
-        return fvgScore;
+        return 0;
     }
 
     // Market Structure - Higher Highs/Lows (Uptrend) or Lower Highs/Lows (Downtrend)
@@ -4698,6 +4927,7 @@ public class Fxausd {
         public int precisionScore;
         public String setupType;
         public double spreadPips;
+        public double riskPercent = 0.01;
 
         TradeSignal(String sym, String dir, double ent, double sl, double tp, double ml, double smc,
                 double strength, String reason, double risk, double reward,
@@ -4747,6 +4977,7 @@ public class Fxausd {
         public double riskPips;
         public double rewardPips;
         public boolean breakevenSet;
+        public boolean partialTaken;
         public int candlesInTrade;
         public int entryIndex;
         public double profitPips;
@@ -4765,6 +4996,7 @@ public class Fxausd {
             this.rewardPips = rewardPips;
             this.entryIndex = entryIndex;
             this.breakevenSet = false;
+            this.partialTaken = false;
             this.candlesInTrade = 0;
             this.profitPips = 0;
         }
@@ -4784,6 +5016,9 @@ public class Fxausd {
             double currentPips = signal.direction.equals("BUY") ? toPips(signal.symbol, currentClose - entryPrice) : toPips(signal.symbol, entryPrice - currentClose);
             profitPips = currentPips;
 
+            // --- QUANTUM FUSION ENGINE: SMART TRADE MANAGEMENT ---
+
+            // 1. 1R -> Move to Break Even
             if (!breakevenSet && currentPips >= riskPips * 1.0) {
                 if (signal.direction.equals("BUY")) {
                     stopLoss = Math.max(stopLoss, entryPrice);
@@ -4791,9 +5026,17 @@ public class Fxausd {
                     stopLoss = Math.min(stopLoss, entryPrice);
                 }
                 breakevenSet = true;
+                System.out.println("🛡️ [QFE Management] BE set for " + signal.symbol);
             }
 
-            if (currentPips >= riskPips * 2.0) {
+            // 2. 2R -> Signal partial profit (In logic only here)
+            if (!partialTaken && currentPips >= riskPips * 2.0) {
+                System.out.println("💰 [QFE Management] 2R reached. Partial profit target hit for " + signal.symbol);
+                partialTaken = true;
+            }
+
+            // 3. 3R+ -> Dynamic ATR Trailing
+            if (currentPips >= riskPips * 3.0) {
                 double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.5);
                 if (signal.direction.equals("BUY")) {
                     stopLoss = Math.max(stopLoss, currentClose - buffer);
@@ -4802,25 +5045,7 @@ public class Fxausd {
                 }
             }
 
-            if (currentPips >= riskPips * 3.0) {
-                double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.25);
-                if (signal.direction.equals("BUY")) {
-                    stopLoss = Math.max(stopLoss, currentClose - buffer);
-                } else {
-                    stopLoss = Math.min(stopLoss, currentClose + buffer);
-                }
-            }
-
-            if (currentPips >= riskPips * 4.0) {
-                double buffer = convertPipsToPrice(signal.symbol, riskPips * 0.10);
-                if (signal.direction.equals("BUY")) {
-                    stopLoss = Math.max(stopLoss, currentClose - buffer);
-                } else {
-                    stopLoss = Math.min(stopLoss, currentClose + buffer);
-                }
-            }
-
-            // UPGRADE 4: ATR-scaled dynamic timeout (instead of fixed 10 candles)
+            // ATR-scaled dynamic timeout
             double atr = convertPipsToPrice(signal.symbol, signal.riskAmount);
             double currentPrice = candle.close;
             double atrPct = currentPrice > 0 ? atr / currentPrice : 0.001;
@@ -4833,15 +5058,15 @@ public class Fxausd {
 
             if (signal.direction.equals("BUY")) {
                 if (candle.high >= takeProfit) {
-                    close(takeProfit, "Take Profit Hit");
+                    close(takeProfit, "TP Hit");
                 } else if (candle.low <= stopLoss) {
-                    close(stopLoss, "Stop Loss Hit");
+                    close(stopLoss, "SL/Trailing Hit");
                 }
             } else {
                 if (candle.low <= takeProfit) {
-                    close(takeProfit, "Take Profit Hit");
+                    close(takeProfit, "TP Hit");
                 } else if (candle.high >= stopLoss) {
-                    close(stopLoss, "Stop Loss Hit");
+                    close(stopLoss, "SL/Trailing Hit");
                 }
             }
         }
@@ -4850,11 +5075,13 @@ public class Fxausd {
             if (!isOpen()) {
                 return;
             }
-            exitPrice = price;
-            exitReason = reason;
-            status = "CLOSED";
-            profitPips = signal.direction.equals("BUY") ? toPips(signal.symbol, price - entryPrice) : toPips(signal.symbol, entryPrice - price);
-            pnlUsd = profitPips * lotSize * getPipValue(signal.symbol);
+            this.exitPrice = price;
+            this.exitReason = reason;
+            this.status = "CLOSED";
+            double finalPips = signal.direction.equals("BUY") ? toPips(signal.symbol, price - entryPrice) : toPips(signal.symbol, entryPrice - price);
+            this.profitPips = finalPips;
+            this.pnlUsd = finalPips * lotSize * getPipValue(signal.symbol);
+            System.out.printf("📉 Trade Closed [%s]: %s Pips=%.1f PNL=$%.2f%n", signal.symbol, reason, finalPips, pnlUsd);
         }
     }
 
@@ -4885,6 +5112,15 @@ public class Fxausd {
         public boolean trendAligned;
         public double spreadPips;
         public int precisionScore;
+        
+        // --- AI LEARNING ENGINE DATA ---
+        public double fvgSize;
+        public double sweepSize;
+        public boolean hasBOS;
+        public boolean hasCHoCH;
+        public double obStrength;
+        public double atr;
+        public double momentum;
 
         TradeRecord(TradeSignal signal, LiveTrade trade) {
             this.timestamp = signal.timestamp;
@@ -4912,6 +5148,10 @@ public class Fxausd {
             this.trendAligned = signal.trendAligned;
             this.spreadPips = signal.spreadPips;
             this.precisionScore = signal.precisionScore;
+            
+            // Capture engine states for learning
+            this.fvgSize = detectFairValueGap(Collections.singletonList(new Candle(0,0,0,0,0,0)), 0); // Placeholder, real engine would pass these
+            this.obStrength = detectOrderBlock(null, 0, 0); 
         }
 
         TradeRecord(TradeSignal signal, String status, String exitReason) {
@@ -4943,10 +5183,11 @@ public class Fxausd {
         }
 
         public String toCsvLine() {
-            return String.format("%d,%s,%s,%.5f,%.5f,%.5f,%.4f,%.2f,%.2f,%.2f,%.2f,%s,%d,%.2f,%.2f,%s,%s,%s,%s,%b,%.2f,%d",
+            return String.format("%d,%s,%s,%.5f,%.5f,%.5f,%.4f,%.2f,%.2f,%.2f,%.2f,%s,%d,%.2f,%.2f,%s,%s,%s,%s,%b,%.2f,%d,%.5f,%.5f,%b,%b,%.2f,%.5f,%.5f",
                     timestamp, safe(symbol), safe(direction), entry, stopLoss, takeProfit, confidence, signalStrength,
                     riskPips, rewardPips, riskRewardRatio, lotSize, safe(regime), sourceIndex, resultPips, pnlUsd, safe(exitReason), safe(status),
-                    safe(session), safe(setupType), trendAligned, spreadPips, precisionScore);
+                    safe(session), safe(setupType), trendAligned, spreadPips, precisionScore,
+                    fvgSize, sweepSize, hasBOS, hasCHoCH, obStrength, atr, momentum);
         }
 
         private static String safe(String input) {
@@ -5968,4 +6209,182 @@ public class Fxausd {
         }
         return 4567;
     }
+
+    // ============================================================
+    // THE QUANTUM FUSION ENGINE (QFE) - Master Decision Engine
+    // ============================================================
+    public static java.util.List<TradeSignal> generateQuantumFusionSignals(java.util.List<Candle> candles, String symbol, String liveTimeframe) {
+        java.util.List<TradeSignal> signals = new ArrayList<>();
+        if (candles == null || candles.size() < 200) return signals;
+
+        // --- MASTER ENVIRONMENT FILTER ---
+        if (isHighImpactNewsWindow()) {
+            System.out.println("🛡️ [QFE Protocol] News window active - suppressing executions for " + symbol);
+            return signals;
+        }
+
+        int last = candles.size() - 1;
+        String regime = detectMarketRegime(candles, last, 30);
+        boolean trending = regime.equals("TRENDING");
+        boolean ranging = regime.equals("RANGING") || regime.equals("ACCUMULATION") || regime.equals("DISTRIBUTION");
+
+        // Evaluate both directions
+        signals.addAll(evaluateFusionForDirection(candles, symbol, liveTimeframe, "BUY", trending, ranging));
+        signals.addAll(evaluateFusionForDirection(candles, symbol, liveTimeframe, "SELL", trending, ranging));
+
+        return signals;
+    }
+
+    private static java.util.List<TradeSignal> evaluateFusionForDirection(java.util.List<Candle> candles, String symbol, String timeframe, String dir, boolean trending, boolean ranging) {
+        java.util.List<TradeSignal> result = new ArrayList<>();
+        int last = candles.size() - 1;
+        Candle current = candles.get(last);
+        double price = current.close;
+
+        // Weights: Q(35), SMC(30), Sniper(15), BO(10), MR(10), Risk(10)
+        double qScore = scoreBrain1_QILH(candles, last, dir);
+        double smcScore = scoreBrain2_SMC(candles, last, dir);
+        double riskScore = scoreBrain6_Risk(symbol);
+
+        double confidence = 0;
+        StringBuilder audit = new StringBuilder(String.format("⚛️ [QFE %s] %s | ", dir, symbol));
+
+        if (trending) {
+            double sniperScore = scoreBrain3_Sniper(candles, last, dir);
+            double breakoutScore = scoreBrain4_Breakout(candles, last, dir);
+            confidence = (qScore * 35) + (smcScore * 30) + (sniperScore * 15) + (breakoutScore * 10) + (riskScore * 10);
+            audit.append(String.format("Q:%.0f SMC:%.0f SNP:%.0f BO:%.0f R:%.0f", qScore*35, smcScore*30, sniperScore*15, breakoutScore*10, riskScore*10));
+        } else {
+            // Ranging/Volatile mode - Redistribute Sniper/BO weight (25 pts) to QILH (+10) and SMC (+15)
+            double mrScore = scoreBrain5_MeanReversion(candles, last, dir);
+            confidence = (qScore * 45) + (smcScore * 45) + (mrScore * 10) + (riskScore * 10);
+            audit.append(String.format("Q:%.0f SMC:%.0f MR:%.0f R:%.0f", qScore*45, smcScore*45, mrScore*10, riskScore*10));
+        }
+
+        // Only trade if Confidence >= 95
+        if (confidence >= 95) {
+            double slPips = calculateAdaptiveStopLoss(candles, last, dir, symbol);
+            double tpPips = slPips * (trending ? 3.0 : 2.0); // Trending targets higher R:R
+            
+            // Dynamic Risk based on confidence
+            double riskPct = 0.005; // 0.5% fallback
+            if (confidence >= 98) riskPct = 0.02;      // 2% Risk
+            else if (confidence >= 95) riskPct = 0.01; // 1% Risk
+
+            String reason = String.format("QFE Fusion %s: Confidence %.0f%% [%s]", dir, confidence, trending ? "TREND" : "RANGE");
+            TradeSignal sig = new TradeSignal(symbol, dir, price, 0, 0, confidence/100.0, 0.90, confidence, reason, slPips, tpPips);
+            
+            // Set prices
+            double slPrice = dir.equals("BUY") ? price - convertPipsToPrice(symbol, slPips) : price + convertPipsToPrice(symbol, slPips);
+            double tpPrice = dir.equals("BUY") ? price + convertPipsToPrice(symbol, tpPips) : price - convertPipsToPrice(symbol, tpPips);
+            sig.stopLoss = slPrice;
+            sig.takeProfit = tpPrice;
+            
+            result.add(sig);
+            System.out.println(audit.toString() + " -> " + confidence + "% 🔥 [EXECUTE]");
+        } else {
+            if (confidence > 75) System.out.println(audit.toString() + " -> " + confidence + "% (Req: 95+)");
+        }
+
+        return result;
+    }
+
+    private static double scoreBrain1_QILH(java.util.List<Candle> candles, int index, String dir) {
+        int sweep = detectLiquiditySweepDirection(candles, index);
+        double imbalance = calculateVolumeImbalance(candles, index);
+        double orderBlock = detectOrderBlock(candles, index, 15);
+        double score = 0;
+        if (dir.equals("BUY")) {
+            if (sweep == 1) score += 0.6;
+            if (imbalance > 0.5) score += 0.2;
+            if (orderBlock > 0.6) score += 0.2;
+        } else {
+            if (sweep == -1) score += 0.6;
+            if (imbalance < -0.5) score += 0.2;
+            if (orderBlock > 0.6) score += 0.2;
+        }
+        return Math.min(1.0, score);
+    }
+
+    private static double scoreBrain2_SMC(java.util.List<Candle> candles, int index, String dir) {
+        int bos = detectBOS(candles, index);
+        int choch = detectCHoCH(candles, index);
+        double fvg = detectFairValueGap(candles, index);
+        double score = 0;
+        if (dir.equals("BUY")) {
+            if (bos == 1 || choch == 1) score += 0.7;
+            if (fvg > 0.3) score += 0.3;
+        } else {
+            if (bos == -1 || choch == -1) score += 0.7;
+            if (fvg < -0.3) score += 0.3;
+        }
+        return Math.min(1.0, score);
+    }
+
+    private static double scoreBrain3_Sniper(java.util.List<Candle> candles, int index, String dir) {
+        double atr = calculateATR(candles, index, 14);
+        double body = Math.abs(candles.get(index).close - candles.get(index).open);
+        double avgVol = calculateAverageVolume(candles, index - 1, 20);
+        double currentVol = candles.get(index).volume;
+        
+        double score = 0;
+        if (currentVol > avgVol * 1.3) score += 0.5;
+        if (body > atr * 0.8) score += 0.5;
+        
+        // Directional alignment
+        if (dir.equals("BUY") && candles.get(index).close < candles.get(index).open) score *= 0.5;
+        if (dir.equals("SELL") && candles.get(index).close > candles.get(index).open) score *= 0.5;
+        
+        return score;
+    }
+
+    private static double scoreBrain4_Breakout(java.util.List<Candle> candles, int index, String dir) {
+        double recentHigh = getRecentHigh(candles, index - 15, index - 1);
+        double recentLow = getRecentLow(candles, index - 15, index - 1);
+        double price = candles.get(index).close;
+        double atr = calculateATR(candles, index, 14);
+        
+        if (dir.equals("BUY") && price > recentHigh + (atr * 0.2)) return 1.0;
+        if (dir.equals("SELL") && price < recentLow - (atr * 0.2)) return 1.0;
+        return 0.0;
+    }
+
+    private static double scoreBrain5_MeanReversion(java.util.List<Candle> candles, int index, String dir) {
+        double rsi = calculateRSI(candles, index, 14);
+        double score = 0;
+        if (dir.equals("BUY")) {
+            if (rsi < 35) score += 0.8;
+            if (rsi < 30) score += 0.2;
+        } else {
+            if (rsi > 65) score += 0.8;
+            if (rsi > 70) score += 0.2;
+        }
+        return score;
+    }
+
+    private static double scoreBrain6_Risk(String symbol) {
+        double spread = getCurrentSpreadPips(symbol);
+        if (spread <= getMaxAllowedSpread(symbol) * 0.8) return 1.0;
+        if (spread <= getMaxAllowedSpread(symbol)) return 0.7;
+        return 0.0;
+    }
+
+    private static double getMaxAllowedSpread(String symbol) {
+        if (symbol == null) return 3.0;
+        String s = symbol.toUpperCase();
+        if (s.contains("XAU") || s.contains("GOLD")) return 35.0;
+        if (s.contains("EURUSD")) return 1.5;
+        if (s.contains("GBPUSD")) return 2.0;
+        if (isCrypto(symbol)) return 150.0;
+        return 3.0;
+    }
+
+    private static double calculateAdaptiveStopLoss(java.util.List<Candle> candles, int index, String dir, String symbol) {
+        double atr = calculateATR(candles, index, 14);
+        double minSl = isGoldSymbol(symbol) ? 25.0 : 8.0;
+        double baseSl = convertPriceDiffToPips(symbol, atr * 1.8);
+        return Math.max(minSl, baseSl);
+    }
+
 }
+

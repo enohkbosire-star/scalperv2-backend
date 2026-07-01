@@ -60,12 +60,16 @@ public class ExecutionEngine {
                 System.out.println("⚠️ Skipping " + signal.symbol + " until breakout zone retest occurs.");
                 continue;
             }
-            if (isHighImpactNewsWindow()) {
+            if (Fxausd.isHighImpactNewsWindow()) {
                 System.out.println("⚠️ Skipping " + signal.symbol + " because a high-impact news window is active.");
                 continue;
             }
-            double riskUsd = accountBalanceUsd * riskPercent;
-            double lotSize = Math.max(0.01, Math.min(1.0, riskUsd / (signal.riskAmount * 10.0)));
+
+            // --- UPGRADE: DYNAMIC RISK FROM FUSION ENGINE ---
+            double activeRiskPercent = (signal.riskPercent > 0) ? signal.riskPercent : riskPercent;
+            double riskUsd = accountBalanceUsd * activeRiskPercent;
+            
+            double lotSize = Math.max(0.01, Math.min(1.0, riskUsd / (signal.riskAmount * Fxausd.getPipValue(signal.symbol))));
             if (lotSize <= 0) {
                 System.out.println("⚠️ Position sizing failed for " + signal.symbol + ".");
                 continue;
