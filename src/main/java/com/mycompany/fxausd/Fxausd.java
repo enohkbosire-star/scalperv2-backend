@@ -1118,7 +1118,8 @@ public class Fxausd {
                     updateGlobalIntelligence(symbol, symbolCandles);
                     
                     // --- THE QUANTUM FUSION ENGINE (QFE) ---
-                    java.util.List<TradeSignal> fusionSignals = generateQuantumFusionSignals(symbolCandles, symbol, liveTimeframe);
+                    // Using runQuantumFusionEngine as the master decision core
+                    java.util.List<TradeSignal> fusionSignals = runQuantumFusionEngine(symbolCandles, symbol, liveTimeframe);
 
                     if (!fusionSignals.isEmpty()) {
                         System.out.println("🔥 [QFE EXECUTE] Fusion strategy confirmed A+ setup for " + symbol);
@@ -1157,10 +1158,10 @@ public class Fxausd {
     public static String MT5_ENDPOINT_OVERRIDE = null;
     public static String MT5_CHART_ENDPOINT_OVERRIDE = null;
     public static String MT5_SYMBOLS_ENDPOINT_OVERRIDE = null;
-    public static final String DEFAULT_MT5_BASE_ENDPOINT = "https://fxausd.onrender.com/api";
-    public static final String DEFAULT_MT5_LEGACY_BASE_ENDPOINT = "https://fxausd-bridge.onrender.com/api";
+    public static final String DEFAULT_MT5_BASE_ENDPOINT = "http://127.0.0.1:5005/api";
+    public static final String DEFAULT_MT5_LEGACY_BASE_ENDPOINT = "https://fxausd.onrender.com/api";
     public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT = "http://127.0.0.1:5000/api";
-    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "http://127.0.0.1:5005/api";
+    public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_2 = "https://fxausd-bridge.onrender.com/api";
     public static final String DEFAULT_MT5_FALLBACK_BASE_ENDPOINT_3 = "http://127.0.0.1:5001/api";
     public static final String DEFAULT_MT5_ENDPOINT = DEFAULT_MT5_BASE_ENDPOINT + "/order";
     public static final String DEFAULT_MT5_FALLBACK_ENDPOINT = DEFAULT_MT5_FALLBACK_BASE_ENDPOINT + "/order";
@@ -3217,12 +3218,21 @@ public class Fxausd {
     // ========================================================================
     // QUANTUM FUSION ENGINE (QFE) - THE MASTER DECISION CORE
     // ========================================================================
+    public static class StrategyVote {
+        public String direction = "NONE";
+        public double confidence = 0.0;
+        public double qualityScore = 0.0;
+        public String grade = "C";
+    }
+
     public static class MarketEnvironment {
-        public String regime; // TRENDING, RANGING, VOLATILE
+        public String regime; // TRENDING, RANGING, BREAKOUT, VOLATILE
         public double atrPct;
         public boolean isKillzone;
         public boolean newsApproaching;
         public String session;
+        public double volatilityScore;
+        public double liquidityLevel;
     }
 
     public static class FusionResult {
@@ -3231,6 +3241,7 @@ public class Fxausd {
         public Map<String, Double> brainScores = new HashMap<>();
         public String audit;
         public double riskPercent;
+        public String institutionalGrade;
     }
 
     public static MarketEnvironment analyzeEnvironment(java.util.List<Candle> candles, String symbol) {
@@ -3240,9 +3251,17 @@ public class Fxausd {
         double atr = calculateATR(candles, last, 14);
         env.atrPct = atr / Math.max(price, 1e-6);
         
-        env.regime = detectMarketRegime(candles, last, 30);
+        String baseRegime = detectMarketRegime(candles, last, 30);
+        double volIntensity = candles.get(last).volume / Math.max(1, calculateAverageVolume(candles, last, 20));
+        
+        // Refined Regime Detection
+        if (volIntensity > 1.5 && detectBOS(candles, last) != 0) env.regime = "BREAKOUT";
+        else env.regime = baseRegime;
+        
         env.isKillzone = isWithinKillzone();
         env.newsApproaching = isHighImpactNewsWindow();
+        env.volatilityScore = env.atrPct * 1000;
+        env.liquidityLevel = detectLiquidityZone(candles, last, 20);
         
         ZonedDateTime nowUtc = ZonedDateTime.now(ZoneOffset.UTC);
         int hour = nowUtc.getHour();
@@ -3258,9 +3277,17 @@ public class Fxausd {
         List<TradeSignal> signals = new ArrayList<>();
         MarketEnvironment env = analyzeEnvironment(candles, symbol);
         
-        // --- 1. MILITARY FILTER (Market Environment) ---
+        // --- 1. MILITARY FILTERS (Final Checks) ---
         if (env.newsApproaching) {
              System.out.println("🛡️ [QFE] Stand down: High-impact news detected for " + symbol);
+             return signals;
+        }
+
+        // Spread Filter
+        double spread = getCurrentSpreadPips(symbol);
+        double maxSpread = (symbol.contains("XAU") || symbol.contains("XAG")) ? 30.0 : 2.5;
+        if (spread > maxSpread) {
+             System.out.println("⏩ [QFE] Spread too wide for " + symbol + ": " + spread);
              return signals;
         }
         
@@ -3274,121 +3301,175 @@ public class Fxausd {
 
         // --- 2. MULTI-TIMEFRAME AGREEMENT ---
         double mtfScore = calculateMTFAlignment(symbol, timeframe);
-        if (mtfScore < 0.65) {
+        if (mtfScore < 0.60) {
             System.out.println("⏳ [QFE] Weak MTF alignment for " + symbol + " (Score: " + String.format("%.2f", mtfScore) + ")");
             return signals;
         }
 
-        // --- 3. THE FIVE BRAINS ---
-        FusionResult buyRes = processFusion(candles, symbol, "BUY", env, mtfScore);
-        FusionResult sellRes = processFusion(candles, symbol, "SELL", env, mtfScore);
+        // --- 3. MASTER AI FUSION (Collect votes from all specialists) ---
+        FusionResult result = executeFusionCore(candles, symbol, env, mtfScore);
 
-        FusionResult winner = (buyRes.totalConfidence > sellRes.totalConfidence) ? buyRes : sellRes;
-        
-        // High Precision Floor
-        double floor = (env.regime.equals("VOLATILE")) ? 95.0 : 92.0;
+        // Institutional Trade Approval Matrix (Minimum 90/100)
+        double threshold = 90.0;
+        if (env.regime.equals("VOLATILE")) threshold = 94.0;
 
-        if (winner.totalConfidence >= floor) {
-            System.out.println("🎯 [FUSION STRIKE] " + symbol + " " + winner.direction + " | Confidence: " + String.format("%.1f", winner.totalConfidence) + "%");
-            System.out.println("   🧠 Brains: " + winner.brainScores);
+        if (result.direction != null && !result.direction.equals("NONE") && result.totalConfidence >= threshold) {
+            System.out.println("🎯 [FUSION STRIKE] " + symbol + " " + result.direction + " | Confidence: " + String.format("%.1f", result.totalConfidence) + "%");
+            System.out.println("   🧠 Brain Votes: " + result.brainScores);
+            System.out.println("   💎 Grade: " + result.institutionalGrade);
             
             double atr = calculateATR(candles, last, 14);
-            // Higher precision: SL based on sweep or structure instead of just ATR
             double slPips = calculateSMCStopLossDistance(atr, convertPipsToPrice(symbol, 40), 0.6, env.atrPct);
-            double tpPips = slPips * calculateLiveTakeProfitMultiplier(0.7, 0.4, env.atrPct);
+            double tpPips = computeStructureBasedTP(candles, last, result.direction, price, slPips, symbol);
             
-            String fusionReason = "QFE " + winner.direction + " [" + winner.audit + "] Conf:" + String.format("%.1f", winner.totalConfidence);
-            TradeSignal signal = createEliteSignal(symbol, winner.direction, price, slPips, tpPips, 
-                winner.totalConfidence / 100.0, 0.95, winner.totalConfidence, fusionReason, winner.direction.equals("BUY"));
+            String fusionReason = String.format("QFE Fusion: %s | Grade: %s | Conf: %.1f%%", result.audit, result.institutionalGrade, result.totalConfidence);
+            TradeSignal signal = createEliteSignal(symbol, result.direction, price, slPips, tpPips, 
+                result.totalConfidence / 100.0, 0.95, result.totalConfidence, fusionReason, result.direction.equals("BUY"));
             
-            signal.riskPercent = winner.riskPercent; // Dynamic Risk
+            signal.riskPercent = result.riskPercent;
             signals.add(signal);
         }
 
         return signals;
     }
 
-    private static FusionResult processFusion(java.util.List<Candle> candles, String symbol, String dir, MarketEnvironment env, double mtfScore) {
+    private static FusionResult executeFusionCore(java.util.List<Candle> candles, String symbol, MarketEnvironment env, double mtfScore) {
+        FusionResult buyResult = calculateConsensus(candles, symbol, "BUY", env, mtfScore);
+        FusionResult sellResult = calculateConsensus(candles, symbol, "SELL", env, mtfScore);
+        
+        return (buyResult.totalConfidence >= sellResult.totalConfidence) ? buyResult : sellResult;
+    }
+
+    private static FusionResult calculateConsensus(java.util.List<Candle> candles, String symbol, String dir, MarketEnvironment env, double mtfScore) {
         FusionResult res = new FusionResult();
         res.direction = dir;
-        int last = candles.size() - 1;
         
-        // Brain 1: QILH (35%) - The Gatekeeper
-        int sweep = detectLiquiditySweepDirection(candles, last);
-        double qilhRaw = 0;
-        if (dir.equals("BUY") && sweep == 1) qilhRaw = 1.0;
-        else if (dir.equals("SELL") && sweep == -1) qilhRaw = 1.0;
-        double qilhScore = qilhRaw * 35.0;
-        res.brainScores.put("QILH", qilhScore);
+        // 1. Collect Specialist Votes
+        StrategyVote qilh = getQILHVote(candles, dir);
+        StrategyVote smc = getSMCVote(candles, dir);
+        StrategyVote sniper = getSniperVote(candles, dir);
+        StrategyVote breakout = getBreakoutVote(candles, dir);
+        StrategyVote meanRev = getMeanReversionVote(candles, dir);
+        
+        // 2. Dynamic Weighting based on Regime
+        double wQilh = 25, wSmc = 20, wSniper = 20, wMeanRev = 0, wBreak = 35; // Default (Breakout)
+        
+        if (env.regime.equals("TRENDING")) {
+            wQilh = 30; wSmc = 30; wSniper = 25; wMeanRev = 0; wBreak = 15;
+        } else if (env.regime.equals("RANGING")) {
+            wQilh = 20; wSmc = 15; wSniper = 0; wMeanRev = 50; wBreak = 15;
+        } else if (env.regime.equals("BREAKOUT")) {
+            wQilh = 25; wSmc = 20; wSniper = 20; wMeanRev = 0; wBreak = 35;
+        }
 
-        // Brain 2: SMC (30%) - Structural Validation
+        // 3. Calculation
+        double totalScore = (qilh.confidence * wQilh / 100.0) +
+                           (smc.confidence * wSmc / 100.0) +
+                           (sniper.confidence * wSniper / 100.0) +
+                           (breakout.confidence * wBreak / 100.0) +
+                           (meanRev.confidence * wMeanRev / 100.0);
+        
+        // MTF Bonus (Institutional Evidence)
+        if (mtfScore > 0.8) totalScore += 5.0;
+        if (env.isKillzone) totalScore += 5.0;
+        
+        res.totalConfidence = Math.min(100.0, totalScore);
+        res.brainScores.put("QILH", qilh.confidence);
+        res.brainScores.put("SMC", smc.confidence);
+        res.brainScores.put("Sniper", sniper.confidence);
+        res.brainScores.put("Breakout", breakout.confidence);
+        res.brainScores.put("MeanRev", meanRev.confidence);
+        
+        res.institutionalGrade = (res.totalConfidence >= 95) ? "A+" : (res.totalConfidence >= 90) ? "A" : (res.totalConfidence >= 80) ? "B" : "C";
+        res.riskPercent = (res.totalConfidence >= 95) ? 0.02 : (res.totalConfidence >= 90) ? 0.015 : 0.01;
+        res.audit = String.format("QILH:%d SMC:%d SNIPER:%d BRK:%d MR:%d", 
+            (int)qilh.confidence, (int)smc.confidence, (int)sniper.confidence, (int)breakout.confidence, (int)meanRev.confidence);
+
+        return res;
+    }
+
+    private static StrategyVote getQILHVote(java.util.List<Candle> candles, String dir) {
+        StrategyVote vote = new StrategyVote();
+        int last = candles.size() - 1;
+        int sweep = detectLiquiditySweepDirection(candles, last);
+        double imbalance = Math.abs(calculateVolumeImbalance(candles, last));
+        
+        if ((dir.equals("BUY") && sweep == 1) || (dir.equals("SELL") && sweep == -1)) {
+            vote.confidence = 70 + (imbalance * 30);
+            vote.direction = dir;
+        }
+        return vote;
+    }
+
+    private static StrategyVote getSMCVote(java.util.List<Candle> candles, String dir) {
+        StrategyVote vote = new StrategyVote();
+        int last = candles.size() - 1;
         int structure = detectMarketStructure(candles, last, 20);
         int choch = detectCHoCH(candles, last);
         int bos = detectBOS(candles, last);
         double ob = detectOrderBlock(candles, last, 20);
-        double fvg = detectFairValueGap(candles, last);
+        double fvg = Math.abs(detectFairValueGap(candles, last));
         
-        double smcRaw = 0;
+        double score = 0;
         if (dir.equals("BUY")) {
-            if (structure == 1) smcRaw += 0.2;
-            if (choch == 1 || bos == 1) smcRaw += 0.3;
-            if (ob > 0.6) smcRaw += 0.3;
-            if (fvg > 0.2) smcRaw += 0.2;
+            if (structure == 1) score += 20;
+            if (choch == 1 || bos == 1) score += 40;
+            if (ob > 0.6) score += 20;
+            if (fvg > 0.2) score += 20;
         } else {
-            if (structure == -1) smcRaw += 0.2;
-            if (choch == -1 || bos == -1) smcRaw += 0.3;
-            if (ob > 0.6) smcRaw += 0.3;
-            if (fvg < -0.2) smcRaw += 0.2;
+            if (structure == -1) score += 20;
+            if (choch == -1 || bos == -1) score += 40;
+            if (ob > 0.6) score += 20;
+            if (fvg > 0.2) score += 20;
         }
-        double smcScore = smcRaw * 30.0;
-        res.brainScores.put("SMC", smcScore);
+        vote.confidence = score;
+        vote.direction = (score > 40) ? dir : "NONE";
+        return vote;
+    }
 
-        // Brain 3: Sniper Mode (15%) - Momentum
+    private static StrategyVote getSniperVote(java.util.List<Candle> candles, String dir) {
+        StrategyVote vote = new StrategyVote();
+        int last = candles.size() - 1;
         double flow = calculateOrderFlowIntensity(candles, last);
         double disp = calculateInstitutionalDisplacement(candles, last);
-        double sniperRaw = 0;
-        if (dir.equals("BUY")) {
-            if (flow > 0.65) sniperRaw += 0.5;
-            if (disp > 1.2) sniperRaw += 0.5;
-        } else {
-            if (flow < 0.35) sniperRaw += 0.5;
-            if (disp > 1.2) sniperRaw += 0.5;
-        }
-        double sniperScore = sniperRaw * 15.0;
-        res.brainScores.put("Sniper", sniperScore);
-
-        // Brain 4 & 5: Execution Entry (10%)
-        double entryScore = 0;
-        if (env.regime.equals("TRENDING")) {
-            // Breakout Brain
-            int breakDir = detectBOS(candles, last); // Use BOS as breakout proxy
-            if (dir.equals("BUY") && breakDir == 1) entryScore = 10.0;
-            else if (dir.equals("SELL") && breakDir == -1) entryScore = 10.0;
-        } else {
-            // Mean Reversion Brain
-            double rsi = calculateRSI(candles, last, 14);
-            if (dir.equals("BUY") && rsi < 32) entryScore = 10.0;
-            else if (dir.equals("SELL") && rsi > 68) entryScore = 10.0;
-        }
-        res.brainScores.put("Entry", entryScore);
-
-        // Risk & MTF Bonus (10%)
-        double riskBonus = (mtfScore > 0.8) ? 5.0 : 0.0;
-        if (env.isKillzone) riskBonus += 5.0;
-        res.brainScores.put("Risk", riskBonus);
-
-        res.totalConfidence = qilhScore + smcScore + sniperScore + entryScore + riskBonus;
         
-        // Dynamic Risk Assignment
-        if (res.totalConfidence >= 98) res.riskPercent = 0.02; // Elite confidence
-        else if (res.totalConfidence >= 95) res.riskPercent = 0.015;
-        else if (res.totalConfidence >= 90) res.riskPercent = 0.01;
-        else res.riskPercent = 0.005;
-
-        res.audit = String.format("Q:%d S:%d SN:%d E:%d R:%d", 
-            (int)qilhScore, (int)smcScore, (int)sniperScore, (int)entryScore, (int)riskBonus);
+        double score = 0;
+        if (dir.equals("BUY") && flow > 0.60) score += 50;
+        if (dir.equals("SELL") && flow < 0.40) score += 50;
+        if (disp > 1.1) score += 50;
         
-        return res;
+        vote.confidence = Math.min(100, score);
+        vote.direction = (score >= 50) ? dir : "NONE";
+        return vote;
+    }
+
+    private static StrategyVote getBreakoutVote(java.util.List<Candle> candles, String dir) {
+        StrategyVote vote = new StrategyVote();
+        int last = candles.size() - 1;
+        int bos = detectBOS(candles, last);
+        double volIntensity = candles.get(last).volume / Math.max(1, calculateAverageVolume(candles, last, 20));
+        
+        if ((dir.equals("BUY") && bos == 1) || (dir.equals("SELL") && bos == -1)) {
+            vote.confidence = 60 + (Math.min(1.0, volIntensity/2.0) * 40);
+            vote.direction = dir;
+        }
+        return vote;
+    }
+
+    private static StrategyVote getMeanReversionVote(java.util.List<Candle> candles, String dir) {
+        StrategyVote vote = new StrategyVote();
+        int last = candles.size() - 1;
+        double rsi = calculateRSI(candles, last, 14);
+        
+        if (dir.equals("BUY") && rsi < 35) {
+            vote.confidence = (35 - rsi) * 4; // RSI 10 = 100% confidence
+            vote.direction = dir;
+        } else if (dir.equals("SELL") && rsi > 65) {
+            vote.confidence = (rsi - 65) * 4;
+            vote.direction = dir;
+        }
+        vote.confidence = Math.min(100, vote.confidence);
+        return vote;
     }
 
     private static double calculateMTFAlignment(String symbol, String baseTf) {
