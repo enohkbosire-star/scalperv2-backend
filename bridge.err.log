@@ -1,0 +1,5 @@
+2026-07-01 18:46:33,650 - INFO - ✅ MetaTrader 5 Connected Successfully
+2026-07-01 18:46:33,655 - INFO - 🚀 Execution Bridge is LIVE on port 5005
+2026-07-01 18:46:33,887 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5005
+2026-07-01 18:46:33,901 - INFO - [33mPress CTRL+C to quit[0m

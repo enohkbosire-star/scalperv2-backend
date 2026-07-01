@@ -399,7 +399,7 @@ public class Fxausd {
     static final String LIVE_STRATEGY_MODE_ENV = "LIVE_STRATEGY_MODE";
     static final String LIVE_STRATEGY_ARG_PREFIX = "--strategy=";
     static final java.util.List<String> AVAILABLE_LIVE_STRATEGIES = Arrays.asList("smc", "sniper", "meanreversion", "breakout", "auto");
-    static final String DEFAULT_LIVE_STRATEGY_MODE = "auto";
+    static final String DEFAULT_LIVE_STRATEGY_MODE = "fusion";
     static final String DISABLE_FOREXBOT_SERVER_ENV = "DISABLE_FOREXBOT_SERVER";
     static final String FOREXBOT_SERVER_PORT_ENV = "FOREXBOT_SERVER_PORT";
     static final String DASHBOARD_PORT_ENV = "DASHBOARD_PORT";
@@ -1078,7 +1078,7 @@ public class Fxausd {
         }
 
         if (liveMode) {
-            System.out.println("🚀 [MODE] INSTITUTIONAL QUANTUM QILH ENABLED");
+            System.out.println("🚀 [MODE] QUANTUM FUSION ENGINE (QFE) ACTIVE");
             
             // Start servers in a background thread to prevent blocking the scanner
             new Thread(() -> {
@@ -1118,14 +1118,14 @@ public class Fxausd {
                     updateGlobalIntelligence(symbol, symbolCandles);
                     
                     // --- THE QUANTUM FUSION ENGINE (QFE) ---
-                    // Using runQuantumFusionEngine as the master decision core
-                    java.util.List<TradeSignal> fusionSignals = runQuantumFusionEngine(symbolCandles, symbol, liveTimeframe);
+                    // Using generateQuantumFusionSignals as the primary institutional decision core
+                    java.util.List<TradeSignal> fusionSignals = generateQuantumFusionSignals(symbolCandles, symbol, liveTimeframe);
 
                     if (!fusionSignals.isEmpty()) {
-                        System.out.println("🔥 [QFE EXECUTE] Fusion strategy confirmed A+ setup for " + symbol);
+                        System.out.println("🔥 [QFE EXECUTE] Institutional Fusion Consensus Reached for " + symbol);
                         sendLiveSignals(fusionSignals);
                     } else {
-                        System.out.println("⏳ [Idle] " + symbol + ": Fusion engine monitoring fractal for confluence...");
+                        // System.out.println("⏳ [Idle] " + symbol + ": Monitoring for A+ Fusion confluence...");
                     }
 
                     
@@ -3273,8 +3273,9 @@ public class Fxausd {
         return env;
     }
 
-    public static List<TradeSignal> runQuantumFusionEngine(java.util.List<Candle> candles, String symbol, String timeframe) {
-        List<TradeSignal> signals = new ArrayList<>();
+    public static java.util.List<TradeSignal> runQuantumFusionEngine(java.util.List<Candle> candles, String symbol, String timeframe) {
+        System.out.println("🧠 [QFE] Brains online. Fusing analyst votes for " + symbol + "...");
+        java.util.List<TradeSignal> signals = new java.util.ArrayList<>();
         MarketEnvironment env = analyzeEnvironment(candles, symbol);
         
         // --- 1. MILITARY FILTERS (Final Checks) ---
@@ -3769,9 +3770,9 @@ public class Fxausd {
 
         String mode = strategy == null ? DEFAULT_LIVE_STRATEGY_MODE : strategy.toLowerCase(Locale.ROOT).trim();
         
-        // QFE (Quantum Fusion Engine) integration as the master 'auto' handler
-        if (mode.equals("auto") || mode.equals("fusion")) {
-            return runQuantumFusionEngine(candles, symbol, liveTimeframe);
+        // Master QFE Integration
+        if (mode.equals("auto") || mode.equals("fusion") || mode.equals("qfe")) {
+            return generateQuantumFusionSignals(candles, symbol, liveTimeframe);
         }
 
         switch (mode) {

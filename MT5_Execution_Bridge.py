@@ -16,6 +16,56 @@ if not mt5.initialize():
 logger.info("✅ MetaTrader 5 Connected Successfully")
 logger.info("🚀 Execution Bridge is LIVE on port 5005")
 
+# --- NEW: CANDLE FETCHING ENDPOINT ---
+@app.route('/api/candles', methods=['GET'])
+@app.route('/candles', methods=['GET'])
+def get_candles():
+    try:
+        symbol = request.args.get('symbol', 'XAUUSD')
+        timeframe_str = request.args.get('timeframe', 'M5')
+        count = int(request.args.get('count', 220))
+
+        # Map MT5 Timeframes
+        tf_map = {
+            'M1': mt5.TIMEFRAME_M1, 'M5': mt5.TIMEFRAME_M5, 'M15': mt5.TIMEFRAME_M15,
+            'M30': mt5.TIMEFRAME_M30, 'H1': mt5.TIMEFRAME_H1, 'H4': mt5.TIMEFRAME_H4,
+            'D1': mt5.TIMEFRAME_D1, 'W1': mt5.TIMEFRAME_W1, 'MN1': mt5.TIMEFRAME_MN1
+        }
+        mt5_tf = tf_map.get(timeframe_str.upper(), mt5.TIMEFRAME_M5)
+
+        # Fetch rates from MT5
+        rates = mt5.copy_rates_from_pos(symbol, mt5_tf, 0, count)
+        if rates is None:
+            return jsonify({"status": "error", "message": f"Failed to fetch rates for {symbol}"}), 404
+
+        # Convert to list of dicts for Java bot
+        candles = []
+        for r in rates:
+            candles.append({
+                "time": int(r['time']),
+                "open": float(r['open']),
+                "high": float(r['high']),
+                "low": float(r['low']),
+                "close": float(r['close']),
+                "volume": float(r['tick_volume'])
+            })
+
+        return jsonify(candles)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- NEW: SYMBOLS ENDPOINT ---
+@app.route('/api/symbols', methods=['GET'])
+@app.route('/symbols', methods=['GET'])
+def get_symbols():
+    try:
+        symbols = mt5.symbols_get()
+        if symbols is None:
+            return jsonify([])
+        return jsonify([s.name for s in symbols if s.visible])
+    except Exception as e:
+        return jsonify([])
+
 @app.route('/api/order', methods=['POST'])
 def handle_order():
     try:
@@ -67,5 +117,5 @@ def handle_order():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    # Run server on port 5005
-    app.run(host='127.0.0.1', port=5005)
+    # Changed host to 0.0.0.0 to support ngrok tunneling
+    app.run(host='0.0.0.0', port=5005)

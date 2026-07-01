@@ -1,40 +1,61 @@
 @echo off
-TITLE MT5 Execution Bridge (Python 3.13)
-echo 🚀 Restarting MetaTrader 5 Bridge using Python 3.13...
+TITLE MT5 Execution Bridge
+echo ========================================================
+echo 🚀 RESTARTING MT5 EXECUTION BRIDGE
+echo ========================================================
 echo.
 
-:: 1. Kill any existing instances of the bridge to ensure a clean start
-echo 🔄 Stopping existing bridge processes...
+:: 1. Force kill any existing python or bridge processes
+echo 🔄 Cleaning up old processes...
+taskkill /F /IM python.exe /T >nul 2>&1
+taskkill /F /IM py.exe /T >nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq MT5 Execution Bridge*" /T >nul 2>&1
 
+:: 2. Navigate to project directory
 cd /d "C:\Users\PC\Documents\NetBeansProjects\Fxausd"
 
-:: 2. Force the use of Python 3.13 via the launcher
-echo 🔍 Checking for Python 3.13...
+:: 3. Find working Python (Checking 3.13 first)
+echo 🔍 Searching for Python 3.13...
+
+:: Try 'py' launcher with 3.13
 py -3.13 --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo ✅ Found Python 3.13. Installing dependencies...
-    py -3.13 -m pip install MetaTrader5 flask --quiet
-    echo 🚀 Launching Bridge...
-    py -3.13 MT5_Execution_Bridge.py
-    goto end
+    set PY_CMD=py -3.13
+    goto start
 )
 
-:: 3. Fallback to standard python if 3.13 launcher fails
-echo 🔍 Checking standard 'python' command...
+:: Try standard 'python'
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo ✅ Found 'python'. Installing dependencies...
-    python -m pip install MetaTrader5 flask --quiet
-    python MT5_Execution_Bridge.py
-    goto end
+    set PY_CMD=python
+    goto start
+)
+
+:: Try standard 'py'
+py --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set PY_CMD=py
+    goto start
 )
 
 echo.
-echo ❌ ERROR: Could not start Python 3.13.
-echo 💡 Please make sure "python.exe" and "python3.exe" are turned OFF in
-echo    Windows "App Execution Aliases" settings.
-echo.
+echo ❌ ERROR: Python not found!
+echo Please ensure Python 3.13 is installed and "Add to PATH" was checked.
+pause
+exit
 
-:end
+:start
+echo ✅ Using: %PY_CMD%
+echo 📦 Syncing dependencies (MetaTrader5, Flask)...
+%PY_CMD% -m pip install MetaTrader5 flask --quiet
+
+echo.
+echo ========================================================
+echo 🟢 BRIDGE IS LIVE - KEEP THIS WINDOW OPEN
+echo ========================================================
+echo.
+%PY_CMD% MT5_Execution_Bridge.py
+
+echo.
+echo ⚠️ Bridge has stopped.
 pause
